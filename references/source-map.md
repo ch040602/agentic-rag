@@ -10,11 +10,12 @@ The current scaffold implements the portable subset of the public Agentic RAG pa
 - Retrieval plans decompose a question into required facts and routes.
 - Subqueries preserve fact and iteration lineage.
 - Snippets preserve corpus id, document id, score, metadata, and query lineage.
-- Sufficiency assessment returns status, `sufficiency_score`, covered facts, missing facts, unsupported claims, and feedback queries.
+- Sufficiency assessment returns status, `sufficiency_score`, covered facts, missing facts, unsupported claims, conflict evidence, and feedback queries.
 - The deterministic sufficiency judge classifies sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts for offline tests and adapter baselines.
 - Selective generation abstention maps answerability labels to answered, partial, or unanswerable final outputs before citation validation.
 - FRAMES-style evaluation reports fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count for a run result.
 - Conflict evidence contracts preserve incompatible snippet groups for a required fact through context assessment, structured-output conversion, and final answer payloads.
+- Conflict-aware synthesis returns partial answers with citations for each incompatible evidence group instead of merging contradictory snippets into one answer.
 - The orchestrator stops on sufficient, irrelevant, unanswerable, max iteration, or no-subquery states.
 - Final answers are downgraded when sufficiency fails or citations reference snippets that were not retrieved.
 
@@ -28,7 +29,7 @@ These TODOs map the referenced papers and public product docs to concrete implem
 | `RDD-T-00000008` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving retriever adapter baseline for non-parametric retrieved memory. Completed. |
 | `RDD-T-00000009` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency classification and selective abstention policy. Completed. |
 | `RDD-T-00000010` | Fact, Fetch, and Reason / FRAMES | Multi-hop evaluation harness with fact, fetch, reasoning, citation, and iteration metrics. Completed. |
-| `RDD-T-00000011` | Agentic RAG grounded synthesis requirements | Conflict-aware synthesis that cites incompatible evidence instead of merging it silently. |
+| `RDD-T-00000011` | Agentic RAG grounded synthesis requirements | Conflict-aware synthesis that cites incompatible evidence instead of merging it silently. Completed. |
 | `RDD-T-00000012` | Google Cloud Cross Corpus Retrieval docs | Native Google adapter scaffold with region, IAM, and corpus-resource validation. |
 
 ## Decomposed implementation TODOs
@@ -48,7 +49,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 | `RDD-T-00000010` | `RDD-T-00000022` | Fact, Fetch, and Reason / FRAMES | Fixture format and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count. Completed in `src/agentic_rag/evaluation.py`. |
 | `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. Completed in `tests/test_evaluation.py`. |
 | `RDD-T-00000011` | `RDD-T-00000024` | Agentic RAG grounded synthesis requirements | Conflict evidence contracts that keep incompatible snippet groups visible and citable. Completed in `src/agentic_rag/contracts.py` and `src/agentic_rag/adapters/llm.py`. |
-| `RDD-T-00000011` | `RDD-T-00000025` | Agentic RAG grounded synthesis requirements | Conflict-aware judge and synthesis behavior for contradictory evidence. |
+| `RDD-T-00000011` | `RDD-T-00000025` | Agentic RAG grounded synthesis requirements | Conflict-aware judge and synthesis behavior for contradictory evidence. Completed in `src/agentic_rag/sufficiency.py`, `src/agentic_rag/adapters/in_memory.py`, and `tests/test_orchestrator.py`. |
 | `RDD-T-00000012` | `RDD-T-00000026` | Google Cloud Cross Corpus Retrieval docs | Native mode configuration validation for project, location, corpus resources, request mode, and service-account assumptions. |
 | `RDD-T-00000012` | `RDD-T-00000027` | Google Cloud Cross Corpus Retrieval docs | Cross Corpus request adapter seam for `AsyncRetrieveContexts`, `AskContexts`, or equivalent payloads with injected clients. |
 | `RDD-T-00000012` | `RDD-T-00000028` | Google Cloud Cross Corpus Retrieval docs | Public documentation for portable default mode, optional native mode, required configuration, and no-SDK default imports. |

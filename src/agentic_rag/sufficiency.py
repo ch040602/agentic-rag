@@ -9,6 +9,8 @@ from typing import Mapping, Sequence
 from agentic_rag.contracts import (
     AnswerabilityLabel,
     AnswerStatus,
+    ConflictEvidence,
+    ConflictingEvidenceGroup,
     ContextAssessment,
     ContextStatus,
     CoveredFact,
@@ -49,7 +51,7 @@ class AutoraterStyleSufficiencyJudge:
 
         covered: list[CoveredFact] = []
         missing: list[RequiredFact] = []
-        conflicting_fact_ids: list[str] = []
+        conflicts: list[ConflictEvidence] = []
 
         for fact in plan.required_facts:
             route = plan.route_for_fact(fact.id)
@@ -60,8 +62,9 @@ class AutoraterStyleSufficiencyJudge:
             )
             if supporting_snippets:
                 covered.append(CoveredFact(fact.id, tuple(snippet.id for snippet in supporting_snippets)))
-                if _has_conflicting_evidence(supporting_snippets, fact.metadata):
-                    conflicting_fact_ids.append(fact.id)
+                conflict = _conflicting_evidence(fact.id, supporting_snippets, fact.metadata)
+                if conflict is not None:
+                    conflicts.append(conflict)
             elif fact.is_must:
                 missing.append(fact)
 
@@ -78,13 +81,15 @@ class AutoraterStyleSufficiencyJudge:
         )
         missing_descriptions = tuple(fact.description for fact in missing)
 
-        if conflicting_fact_ids:
+        if conflicts:
+            conflicting_fact_ids = tuple(conflict.fact_id for conflict in conflicts)
             return ContextAssessment(
                 status=ContextStatus.INSUFFICIENT,
                 sufficiency_score=min(score, 0.5),
                 covered_facts=tuple(covered),
                 missing_facts=missing_descriptions,
                 unsupported_claims=unsupported,
+                conflicts=tuple(conflicts),
                 feedback_queries=feedback_queries,
                 reason=f"Found conflicting evidence for required facts: {', '.join(conflicting_fact_ids)}.",
                 answerability=AnswerabilityLabel.CONFLICTING,
@@ -185,17 +190,34 @@ def _snippet_supports_fact(snippet: Snippet, fact: RequiredFact, route: Route | 
     return all(str(term).lower() in text for term in required_terms)
 
 
-def _has_conflicting_evidence(snippets: Sequence[Snippet], metadata: Mapping[str, object]) -> bool:
+def _conflicting_evidence(
+    fact_id: str,
+    snippets: Sequence[Snippet],
+    metadata: Mapping[str, object],
+) -> ConflictEvidence | None:
     conflict_terms = _metadata_terms(metadata, "conflict_terms")
     if not conflict_terms:
-        return False
-    matched_terms = {
-        str(term).lower()
-        for snippet in snippets
+        return None
+    groups = tuple(
+        ConflictingEvidenceGroup(
+            label=str(term).lower(),
+            snippet_ids=tuple(
+                snippet.id
+                for snippet in snippets
+                if str(term).lower() in snippet.text.lower()
+            ),
+            value=str(term).lower(),
+        )
         for term in conflict_terms
-        if str(term).lower() in snippet.text.lower()
-    }
-    return len(matched_terms) > 1
+    )
+    groups = tuple(group for group in groups if group.snippet_ids)
+    if len(groups) < 2:
+        return None
+    return ConflictEvidence(
+        fact_id=fact_id,
+        groups=groups,
+        reason=f"Multiple incompatible values were found for required fact '{fact_id}'.",
+    )
 
 
 def _feedback_query(fact: RequiredFact, plan: RetrievalPlan) -> FeedbackQuery | None:
@@ -237,7 +259,7 @@ def _target_answer_status(assessment: ContextAssessment) -> AnswerStatus:
 
 def _partial_answer_text(answer: GroundedAnswer, assessment: ContextAssessment) -> str:
     if assessment.answerability_label == AnswerabilityLabel.CONFLICTING:
-        return "Conflicting context prevents a definitive grounded answer."
+        return "Conflicting evidence prevents a definitive grounded answer."
     if answer.status == AnswerStatus.PARTIAL and answer.answer:
         return answer.answer
     if assessment.missing_facts:

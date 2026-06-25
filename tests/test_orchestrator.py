@@ -15,6 +15,7 @@ from agentic_rag.adapters.in_memory import (  # noqa: E402
     ScriptedPlanner,
     SnippetDrafter,
 )
+from agentic_rag.sufficiency import AutoraterStyleSufficiencyJudge  # noqa: E402
 from agentic_rag.contracts import (  # noqa: E402
     AnswerabilityLabel,
     AnswerStatus,
@@ -227,6 +228,48 @@ class AgenticRAGOrchestratorTests(unittest.TestCase):
         self.assertEqual(("Project Zen owner",), tuple(result.answer.missing_facts))
         self.assertIn("Partial evidence", result.answer.answer)
         self.assertTrue(result.answer.citations)
+
+    def test_conflicting_evidence_is_surfaced_with_both_sides_cited(self):
+        plan = RetrievalPlan(
+            question="Who owns Project Zen?",
+            required_facts=(
+                RequiredFact(
+                    id="owner",
+                    description="Project Zen owner",
+                    metadata={
+                        "required_terms": ("project zen", "owner"),
+                        "conflict_terms": ("nina", "omar"),
+                    },
+                ),
+            ),
+            routes=(Route("owner", ("projects",), "Project records contain owners."),),
+        )
+        retriever = InMemoryRetriever(
+            (
+                InMemoryDocument("projects", "project-1", "Project Zen owner is Nina."),
+                InMemoryDocument("projects", "project-2", "Project Zen owner is Omar."),
+            )
+        )
+        orchestrator = AgenticRAGOrchestrator(
+            planner=ScriptedPlanner(plan),
+            rewriter=FeedbackAwareQueryRewriter(initial_fact_ids=("owner",)),
+            retriever=retriever,
+            drafter=SnippetDrafter(),
+            judge=AutoraterStyleSufficiencyJudge(),
+            synthesizer=RuleBasedSynthesizer(),
+            config=OrchestratorConfig(max_iterations=1),
+        )
+
+        result = orchestrator.run(plan.question, (Corpus("projects", "Project ownership records."),))
+
+        self.assertEqual(AnswerStatus.PARTIAL, result.answer.status)
+        self.assertEqual(AnswerabilityLabel.CONFLICTING, result.iterations[-1].assessment.answerability_label)
+        self.assertEqual("owner", result.answer.conflicts[0].fact_id)
+        self.assertEqual(2, len(result.answer.conflicts[0].groups))
+        self.assertEqual(("nina", "omar"), tuple(group.label for group in result.answer.conflicts[0].groups))
+        self.assertEqual(("owner:nina", "owner:omar"), tuple(citation.claim for citation in result.answer.citations))
+        self.assertTrue(all(citation.snippet_ids for citation in result.answer.citations))
+        self.assertIn("Conflicting evidence", result.answer.answer)
 
 
 if __name__ == "__main__":

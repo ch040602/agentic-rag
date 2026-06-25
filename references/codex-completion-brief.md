@@ -58,7 +58,7 @@ src/agentic_rag/
    - It must return missing facts and feedback queries when insufficient.
    - Add answerability categories and selective abstention behavior inspired by the Sufficient Context paper.
    - Current contracts include `AnswerabilityLabel` while preserving the existing `ContextAssessment.status` API.
-   - Current sufficiency utilities include `AutoraterStyleSufficiencyJudge` for deterministic required-fact coverage, missing facts, unsupported claims, feedback queries, conflict detection, and unanswerable classification.
+   - Current sufficiency utilities include `AutoraterStyleSufficiencyJudge` for deterministic required-fact coverage, missing facts, unsupported claims, feedback queries, conflict evidence grouping, and unanswerable classification.
    - Current orchestrator guard applies selective abstention so insufficient contexts cannot remain fully answered.
    - Implement in order:
      - `RDD-T-00000019`: Sufficient Context answerability categories. Completed.
@@ -80,9 +80,10 @@ src/agentic_rag/
    - Cite both sides of a conflict.
    - Return partial or conflict-aware status when a required fact has incompatible evidence.
    - Current contracts preserve conflict evidence groups in `ContextAssessment`, structured-output conversion, and `GroundedAnswer`.
+   - Current in-memory synthesis cites each incompatible evidence group separately and returns a partial answer instead of merging conflicting facts.
    - Implement in order:
      - `RDD-T-00000024`: Conflict evidence contracts. Completed.
-     - `RDD-T-00000025`: Conflict-aware judge and synthesis behavior.
+     - `RDD-T-00000025`: Conflict-aware judge and synthesis behavior. Completed.
 
 9. **Native Google mode** (`RDD-T-00000012`)
    - If using Gemini Enterprise Agent Platform RAG Engine, add an adapter that calls Cross-Corpus Retrieval APIs.

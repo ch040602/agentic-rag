@@ -203,6 +203,9 @@ class AutoraterStyleSufficiencyJudgeTests(unittest.TestCase):
         self.assertEqual(("owner",), tuple(fact.fact_id for fact in assessment.covered_facts))
         self.assertEqual((), tuple(assessment.missing_facts))
         self.assertIn("conflicting evidence", assessment.reason)
+        self.assertEqual("owner", assessment.conflicts[0].fact_id)
+        self.assertEqual(("s1",), tuple(assessment.conflicts[0].groups[0].snippet_ids))
+        self.assertEqual(("s2",), tuple(assessment.conflicts[0].groups[1].snippet_ids))
 
     def test_marks_unanswerable_when_required_fact_has_no_route_and_no_evidence(self):
         judge = AutoraterStyleSufficiencyJudge()
@@ -306,6 +309,13 @@ class SelectiveAbstentionPolicyTests(unittest.TestCase):
         self.assertEqual(("Project Zen owner",), tuple(guarded.missing_facts))
 
     def test_conflicting_context_becomes_partial_not_answered(self):
+        conflict = ConflictEvidence(
+            fact_id="owner",
+            groups=(
+                ConflictingEvidenceGroup("nina", ("s1",), "nina"),
+                ConflictingEvidenceGroup("omar", ("s2",), "omar"),
+            ),
+        )
         answer = GroundedAnswer(
             answer="Project Zen owner is Nina.",
             citations=(GroundedCitation("owner", ("s1", "s2")),),
@@ -316,6 +326,7 @@ class SelectiveAbstentionPolicyTests(unittest.TestCase):
             status=ContextStatus.INSUFFICIENT,
             sufficiency_score=0.5,
             answerability=AnswerabilityLabel.CONFLICTING,
+            conflicts=(conflict,),
             reason="Found conflicting evidence for required facts: owner.",
         )
 
@@ -323,7 +334,8 @@ class SelectiveAbstentionPolicyTests(unittest.TestCase):
 
         self.assertEqual(AnswerStatus.PARTIAL, guarded.status)
         self.assertEqual(answer.citations, guarded.citations)
-        self.assertIn("Conflicting context", guarded.answer)
+        self.assertEqual((conflict,), tuple(guarded.conflicts))
+        self.assertIn("Conflicting evidence", guarded.answer)
 
     def test_unanswerable_context_clears_citations(self):
         answer = GroundedAnswer(

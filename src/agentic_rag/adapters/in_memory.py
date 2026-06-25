@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Mapping, Sequence
 
 from agentic_rag.contracts import (
+    AnswerabilityLabel,
     AnswerStatus,
     Claim,
     ContextAssessment,
@@ -211,6 +212,27 @@ class RuleBasedSynthesizer:
             )
             for covered in assessment.covered_facts
         )
+        if assessment.answerability_label == AnswerabilityLabel.CONFLICTING and assessment.conflicts:
+            conflict_citations = tuple(
+                GroundedCitation(
+                    claim=f"{conflict.fact_id}:{group.label}",
+                    snippet_ids=tuple(
+                        snippet_id for snippet_id in group.snippet_ids if snippet_id in snippets_by_id
+                    ),
+                )
+                for conflict in assessment.conflicts
+                for group in conflict.groups
+            )
+            conflict_citations = tuple(citation for citation in conflict_citations if citation.snippet_ids)
+            return GroundedAnswer(
+                answer="Conflicting evidence prevents a definitive grounded answer.",
+                citations=conflict_citations,
+                status=AnswerStatus.PARTIAL,
+                missing_facts=tuple(assessment.missing_facts),
+                sufficiency_score=assessment.sufficiency_score,
+                conflicts=tuple(assessment.conflicts),
+            )
+
         if _enum_value(assessment.status) == ContextStatus.SUFFICIENT.value:
             answer_lines = [
                 f"{citation.claim}: " + " ".join(f"[{snippet_id}]" for snippet_id in citation.snippet_ids)
@@ -231,6 +253,7 @@ class RuleBasedSynthesizer:
             status=status,
             missing_facts=tuple(assessment.missing_facts),
             sufficiency_score=assessment.sufficiency_score,
+            conflicts=tuple(assessment.conflicts),
         )
 
 

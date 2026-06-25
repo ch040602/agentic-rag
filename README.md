@@ -1,5 +1,9 @@
 # Agentic RAG Skill
 
+[![CI](https://github.com/ch040602/agentic-rag/actions/workflows/tests.yml/badge.svg)](https://github.com/ch040602/agentic-rag/actions/workflows/tests.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Agentic RAG is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations.
 
 The repository focuses on the product gap between ordinary "retrieve once, answer once" RAG and a more dependable loop:
@@ -10,6 +14,20 @@ plan -> route -> rewrite -> retrieve -> draft -> judge sufficiency -> iterate ->
 
 It is intended for enterprise document search, internal knowledge assistants, RAG application developers, and researchers who need auditable evidence coverage rather than confident answers from incomplete context.
 
+## Contents
+
+- [What This Skill Provides](#what-this-skill-provides)
+- [Repository Layout](#repository-layout)
+- [How It Works](#how-it-works)
+- [Core Contracts](#core-contracts)
+- [Quick Start](#quick-start)
+- [Expected Output Shape](#expected-output-shape)
+- [Implementation Rules](#implementation-rules)
+- [Current Status](#current-status)
+- [Paper Implementation Roadmap](#paper-implementation-roadmap)
+- [Referenced Papers](#referenced-papers)
+- [Sources](#sources)
+
 ## What This Skill Provides
 
 - A Codex `SKILL.md` with activation rules and implementation guidance for Agentic RAG workflows.
@@ -17,9 +35,10 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 - A portable orchestrator that runs iterative retrieval and refuses to mark unsupported answers as grounded.
 - A deterministic autorater-style sufficient-context judge for offline tests and adapter baselines.
 - FRAMES-style evaluation fixtures and metrics for fact, fetch, reasoning, citation, and iteration checks.
+- Conflict-aware synthesis that surfaces contradictory snippets with citations for both incompatible evidence groups.
 - Deterministic in-memory adapters for tests, demos, and provider-adapter contract checks.
 - Reference prompts and JSON schemas for planner, query rewriter, sufficiency judge, and synthesizer components.
-- Tests covering iterative retrieval, missing evidence feedback, unsupported claim detection, citation completeness, and route-aware retrieval.
+- Tests covering iterative retrieval, missing evidence feedback, unsupported claim detection, conflict-aware citation, citation completeness, and route-aware retrieval.
 
 ## Repository Layout
 
@@ -91,7 +110,7 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 - `GroundedAnswer`: answer text, claim-level citations, status, missing facts, final sufficiency score, and optional conflict evidence.
 - `IterationTrace`: subqueries, snippets, draft, and assessment for each loop iteration.
 
-`src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, and assigns Sufficient Context answerability labels. It also provides `apply_selective_abstention_policy`, which maps answerability labels to final answered, partial, or unanswerable outputs before citation validation. Fact matching uses `RequiredFact.metadata["required_terms"]`; optional `conflict_terms` mark incompatible evidence.
+`src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, surfaces conflicting evidence groups, and assigns Sufficient Context answerability labels. It also provides `apply_selective_abstention_policy`, which maps answerability labels to final answered, partial, or unanswerable outputs before citation validation. Fact matching uses `RequiredFact.metadata["required_terms"]`; optional `conflict_terms` mark incompatible evidence.
 
 `src/agentic_rag/evaluation.py` provides FRAMES-style fixture and report dataclasses for multi-hop RAG evaluation. It records bridge facts, expected fetches, expected answer terms, expected citations, and distractor corpora, then reports fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count for a `RunResult`. It also compares baseline and candidate runs so single-shot and iterative retrieval strategies can be evaluated side by side.
 
@@ -214,6 +233,20 @@ ContextAssessment(
 )
 ```
 
+When evidence conflicts, the answer stays partial and cites both incompatible groups:
+
+```python
+GroundedAnswer(
+    answer="Conflicting evidence prevents a definitive grounded answer.",
+    citations=(
+        GroundedCitation("owner:nina", ("projects:project-1:q0-0",)),
+        GroundedCitation("owner:omar", ("projects:project-2:q0-0",)),
+    ),
+    status=AnswerStatus.PARTIAL,
+    sufficiency_score=0.5,
+)
+```
+
 ## Implementation Rules
 
 - Keep provider integrations behind adapters.
@@ -247,6 +280,7 @@ Implemented:
 - Selective generation abstention policy that prevents insufficient context from producing a fully answered result
 - FRAMES-style evaluation fixture, metrics, and run comparison for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count
 - Conflict evidence contracts that preserve incompatible snippet groups through assessment, structured-output conversion, and final answers
+- Conflict-aware judge and synthesis behavior that returns partial answers with citations for both incompatible evidence groups
 - Unit tests for core loop behavior, structured-output conversion, lexical retrieval, sufficiency judging, abstention, and evaluation metrics
 
 Improvement TODOs completed in this pass:
@@ -269,6 +303,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000022`: FRAMES-style fixture format and metrics.
 - `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
 - `RDD-T-00000024`: Conflict evidence contracts.
+- `RDD-T-00000025`: Conflict-aware judge and synthesis behavior.
 
 ## Paper Implementation Roadmap
 
@@ -288,9 +323,9 @@ The next implementation backlog is tracked in `.codex/review-driven-development/
 4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. Completed. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
    - `RDD-T-00000022`: Add FRAMES-style fixture format and metrics for facts, retrieval, reasoning, citations, and iterations. Completed.
    - `RDD-T-00000023`: Add iterative-vs-single-shot evaluation tests using a tiny multi-hop fixture. Completed.
-5. `RDD-T-00000011`: Add conflict-aware grounded synthesis. This ensures conflicting snippets are cited and surfaced instead of silently merged.
+5. `RDD-T-00000011`: Add conflict-aware grounded synthesis. Completed. This ensures conflicting snippets are cited and surfaced instead of silently merged.
    - `RDD-T-00000024`: Add conflict evidence contracts that can cite both incompatible snippet groups. Completed.
-   - `RDD-T-00000025`: Implement conflict-aware judge and synthesis behavior for contradictory evidence.
+   - `RDD-T-00000025`: Implement conflict-aware judge and synthesis behavior for contradictory evidence. Completed.
 6. `RDD-T-00000012`: Add Google Cross Corpus Retrieval adapter scaffold. This keeps native Google mode outside the orchestrator while preserving portable mode as the default.
    - `RDD-T-00000026`: Add Google native mode configuration validation for project, location, corpus resources, and service-account assumptions.
    - `RDD-T-00000027`: Add a Google Cross Corpus request adapter seam with injected client/callable tests and no network dependency.
