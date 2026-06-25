@@ -8,8 +8,10 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from agentic_rag.adapters.llm import (  # noqa: E402
     SchemaValidationError,
+    StructuredOutputRepairRequest,
     get_schema,
     parse_structured_output,
+    parse_structured_output_with_repair,
     to_dataclass,
     to_mapping,
 )
@@ -181,6 +183,89 @@ class LLMAdapterSchemaTests(unittest.TestCase):
 
         self.assertIn("subqueries", str(error.exception))
         self.assertIn("array", str(error.exception))
+
+    def test_one_shot_repair_succeeds_with_injected_callable(self):
+        calls: list[StructuredOutputRepairRequest] = []
+
+        def repair(request: StructuredOutputRepairRequest) -> str:
+            calls.append(request)
+            self.assertEqual("GroundedAnswer", request.schema_name)
+            self.assertIn("missing required field(s): citations", request.errors[0])
+            self.assertIn('"answer": "Needs repair."', request.malformed_output)
+            self.assertIn("Schema name: GroundedAnswer", request.prompt)
+            self.assertIn("Validation errors:", request.prompt)
+            self.assertIn("Malformed output:", request.prompt)
+            return """
+            {
+              "answer": "Repaired answer.",
+              "citations": [],
+              "status": "partial",
+              "missing_facts": [],
+              "sufficiency_score": 0.0
+            }
+            """
+
+        answer = parse_structured_output_with_repair(
+            "GroundedAnswer",
+            """
+            {
+              "answer": "Needs repair.",
+              "status": "partial",
+              "missing_facts": [],
+              "sufficiency_score": 0.0
+            }
+            """,
+            repair=repair,
+        )
+
+        self.assertEqual("Repaired answer.", answer.answer)
+        self.assertEqual(1, len(calls))
+
+    def test_repair_is_not_called_for_valid_output(self):
+        def repair(request: StructuredOutputRepairRequest) -> str:
+            self.fail("repair callable should not be called for valid output")
+
+        answer = parse_structured_output_with_repair(
+            "GroundedAnswer",
+            """
+            {
+              "answer": "Already valid.",
+              "citations": [],
+              "status": "partial",
+              "missing_facts": [],
+              "sufficiency_score": 0.0
+            }
+            """,
+            repair=repair,
+        )
+
+        self.assertEqual("Already valid.", answer.answer)
+
+    def test_one_shot_repair_failure_raises_second_error(self):
+        calls: list[StructuredOutputRepairRequest] = []
+
+        def repair(request: StructuredOutputRepairRequest) -> str:
+            calls.append(request)
+            return """
+            {
+              "answer": "Still invalid.",
+              "citations": [],
+              "status": "complete",
+              "missing_facts": [],
+              "sufficiency_score": 1.0
+            }
+            """
+
+        with self.assertRaises(SchemaValidationError) as error:
+            parse_structured_output_with_repair(
+                "GroundedAnswer",
+                '{"answer": "broken"',
+                repair=repair,
+            )
+
+        self.assertEqual(1, len(calls))
+        self.assertIn("status", str(error.exception))
+        self.assertIn("answered", str(error.exception))
 
 
 if __name__ == "__main__":

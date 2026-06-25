@@ -191,3 +191,25 @@ Return only JSON matching GroundedAnswer.
   }
 }
 ```
+
+## Structured output repair protocol
+
+Provider adapters may retry malformed structured output at most once. The repair request must include:
+
+- `schema_name`: the requested schema name, such as `RetrievalPlan`, `QueryRewriteResult`, `ContextAssessment`, or `GroundedAnswer`.
+- `errors`: validation error messages from the first parse attempt.
+- `malformed_output`: the exact model output that failed parsing or validation.
+
+The repair prompt contract is:
+
+```text
+Repair the structured JSON output so it matches the requested schema.
+Return only corrected JSON. Do not include markdown fences or explanations.
+Schema name: <schema_name>
+Validation errors:
+- <error>
+Malformed output:
+<malformed_output>
+```
+
+The repaired output is parsed through the same strict schema validator. If the repaired output is still invalid, the adapter must surface that second validation error and must not attempt another repair.

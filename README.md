@@ -226,6 +226,7 @@ Implemented:
 - Citation guard that rejects snippet ids not present in retrieved evidence
 - Structured-output schema registry and dataclass conversion helpers for LLM adapters
 - Structured JSON parsing with explicit validation errors for malformed JSON, enum mismatches, field type mismatches, and missing fields
+- One-shot structured output repair protocol with injected repair callable and strict revalidation
 - Unit tests for core loop behavior
   and structured-output conversion
 
@@ -240,6 +241,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000029`: Decomposed paper implementation TODO documentation.
 - `RDD-T-00000014`: Structured-output schema registry and dataclass conversion helpers.
 - `RDD-T-00000015`: Structured JSON parser and validation errors.
+- `RDD-T-00000016`: One-shot structured output repair protocol contract.
 
 ## Paper Implementation Roadmap
 
@@ -248,7 +250,7 @@ The next implementation backlog is tracked in `.codex/review-driven-development/
 1. `RDD-T-00000007`: Add structured-output LLM adapter contracts and JSON repair. This maps the planner, query rewriter, sufficiency judge, and synthesizer prompts into validated machine-readable outputs.
    - `RDD-T-00000014`: Define schema registry and dataclass conversion helpers for `RetrievalPlan`, `QueryRewriteResult`, `ContextAssessment`, and `GroundedAnswer`.
    - `RDD-T-00000015`: Add structured JSON parser and validation errors for malformed JSON, wrong enum values, wrong field types, and missing fields. Completed.
-   - `RDD-T-00000016`: Add one-shot JSON repair protocol contract with an injected repair callable and tests for success and failure.
+   - `RDD-T-00000016`: Add one-shot JSON repair protocol contract with an injected repair callable and tests for success and failure. Completed.
 2. `RDD-T-00000008`: Add retriever adapter baseline with provenance-preserving lexical retrieval. This follows the original RAG paper's emphasis on retrieved non-parametric memory and provenance.
    - `RDD-T-00000017`: Add provenance-preserving lexical retriever adapter outside the orchestrator.
    - `RDD-T-00000018`: Add deterministic retrieval scoring, span extraction, and deduplication tests.

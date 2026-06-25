@@ -38,6 +38,14 @@ class SchemaSpec:
     to_mapping: Callable[[Any], Mapping[str, Any]]
 
 
+@dataclass(frozen=True)
+class StructuredOutputRepairRequest:
+    schema_name: str
+    malformed_output: str
+    errors: Sequence[str]
+    prompt: str
+
+
 def get_schema(schema_name: str) -> SchemaSpec:
     try:
         return SCHEMA_REGISTRY[schema_name]
@@ -56,6 +64,52 @@ def parse_structured_output(schema_name: str, output: str) -> Any:
     if not isinstance(raw, Mapping):
         raise SchemaValidationError(schema_name, "top-level JSON must be an object")
     return to_dataclass(schema_name, raw)
+
+
+def parse_structured_output_with_repair(
+    schema_name: str,
+    output: str,
+    *,
+    repair: Callable[[StructuredOutputRepairRequest], str],
+) -> Any:
+    try:
+        return parse_structured_output(schema_name, output)
+    except SchemaValidationError as exc:
+        request = build_structured_output_repair_request(schema_name, output, (str(exc),))
+        repaired_output = repair(request)
+        return parse_structured_output(schema_name, repaired_output)
+
+
+def build_structured_output_repair_request(
+    schema_name: str,
+    malformed_output: str,
+    errors: Sequence[str],
+) -> StructuredOutputRepairRequest:
+    return StructuredOutputRepairRequest(
+        schema_name=schema_name,
+        malformed_output=malformed_output,
+        errors=tuple(errors),
+        prompt=build_structured_output_repair_prompt(schema_name, malformed_output, errors),
+    )
+
+
+def build_structured_output_repair_prompt(
+    schema_name: str,
+    malformed_output: str,
+    errors: Sequence[str],
+) -> str:
+    error_lines = "\n".join(f"- {error}" for error in errors) or "- Unknown validation error"
+    return "\n".join(
+        (
+            "Repair the structured JSON output so it matches the requested schema.",
+            "Return only corrected JSON. Do not include markdown fences or explanations.",
+            f"Schema name: {schema_name}",
+            "Validation errors:",
+            error_lines,
+            "Malformed output:",
+            malformed_output,
+        )
+    )
 
 
 def to_dataclass(schema_name: str, raw: Mapping[str, Any]) -> Any:

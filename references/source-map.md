@@ -35,7 +35,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 |---|---|---|---|
 | `RDD-T-00000007` | `RDD-T-00000014` | Google Agentic RAG roles and structured prompt schemas | Schema registry and dataclass conversion helpers for planner, rewriter, judge, and synthesizer outputs. Completed in `src/agentic_rag/adapters/llm.py`. |
 | `RDD-T-00000007` | `RDD-T-00000015` | Google Agentic RAG structured output requirement | Strict JSON parser and validation errors for malformed or schema-invalid model output. Completed in `src/agentic_rag/adapters/llm.py`. |
-| `RDD-T-00000007` | `RDD-T-00000016` | Production structured-output repair pattern | One-shot repair protocol contract with explicit malformed output, error list, and schema name. |
+| `RDD-T-00000007` | `RDD-T-00000016` | Production structured-output repair pattern | One-shot repair protocol contract with explicit malformed output, error list, and schema name. Completed in `src/agentic_rag/adapters/llm.py` and `references/prompts-and-schemas.md`. |
 | `RDD-T-00000008` | `RDD-T-00000017` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving lexical retriever adapter with corpus, document, query, score, metadata, span, and fact lineage. |
 | `RDD-T-00000008` | `RDD-T-00000018` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Deterministic scoring, ordering, span extraction, and duplicate-document behavior. |
 | `RDD-T-00000009` | `RDD-T-00000019` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Answerability labels for sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts. |
