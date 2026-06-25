@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Sequence, TypeVar
+from json import JSONDecodeError
+from typing import Any, Callable, Mapping, Sequence
 
 from agentic_rag.contracts import (
     ContextAssessment,
@@ -17,9 +19,6 @@ from agentic_rag.contracts import (
     Route,
     Subquery,
 )
-
-
-T = TypeVar("T")
 
 
 class SchemaValidationError(ValueError):
@@ -46,7 +45,22 @@ def get_schema(schema_name: str) -> SchemaSpec:
         raise SchemaValidationError(schema_name, "unknown schema") from exc
 
 
+def parse_structured_output(schema_name: str, output: str) -> Any:
+    try:
+        raw = json.loads(output)
+    except JSONDecodeError as exc:
+        raise SchemaValidationError(
+            schema_name,
+            f"malformed JSON at line {exc.lineno} column {exc.colno}: {exc.msg}",
+        ) from exc
+    if not isinstance(raw, Mapping):
+        raise SchemaValidationError(schema_name, "top-level JSON must be an object")
+    return to_dataclass(schema_name, raw)
+
+
 def to_dataclass(schema_name: str, raw: Mapping[str, Any]) -> Any:
+    if not isinstance(raw, Mapping):
+        raise SchemaValidationError(schema_name, "schema input must be an object")
     spec = get_schema(schema_name)
     _require_fields(schema_name, raw, spec.required_fields)
     return spec.from_mapping(raw)
@@ -65,52 +79,91 @@ def _require_fields(schema_name: str, raw: Mapping[str, Any], fields: Sequence[s
         raise SchemaValidationError(schema_name, "missing required field(s): " + ", ".join(missing))
 
 
+def _string(schema_name: str, value: object, path: str) -> str:
+    if not isinstance(value, str):
+        raise SchemaValidationError(schema_name, f"{path} must be a string")
+    return value
+
+
+def _number(
+    schema_name: str,
+    value: object,
+    path: str,
+    *,
+    minimum: float | None = None,
+    maximum: float | None = None,
+) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise SchemaValidationError(schema_name, f"{path} must be a number")
+    number = float(value)
+    if minimum is not None and number < minimum:
+        raise SchemaValidationError(schema_name, f"{path} must be >= {minimum:g}")
+    if maximum is not None and number > maximum:
+        raise SchemaValidationError(schema_name, f"{path} must be <= {maximum:g}")
+    return number
+
+
+def _enum(schema_name: str, value: object, path: str, allowed: Sequence[str]) -> str:
+    text = _string(schema_name, value, path)
+    if text not in allowed:
+        raise SchemaValidationError(
+            schema_name,
+            f"{path} must be one of: " + ", ".join(allowed),
+        )
+    return text
+
+
 def _as_mapping(schema_name: str, value: object, path: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise SchemaValidationError(schema_name, f"{path} must be an object")
     return value
 
 
-def _sequence(value: object) -> Sequence[Any]:
-    if value is None:
-        return ()
-    if isinstance(value, (str, bytes)):
-        return (value,)
-    if isinstance(value, Sequence):
-        return value
-    return (value,)
+def _array(schema_name: str, value: object, path: str) -> Sequence[Any]:
+    if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
+        raise SchemaValidationError(schema_name, f"{path} must be an array")
+    return value
+
+
+def _string_array(schema_name: str, value: object, path: str) -> tuple[str, ...]:
+    return tuple(_string(schema_name, item, f"{path}[]") for item in _array(schema_name, value, path))
 
 
 def _from_retrieval_plan(raw: Mapping[str, Any]) -> RetrievalPlan:
     schema = "RetrievalPlan"
     required_facts = tuple(
         _from_required_fact(_as_mapping(schema, item, "required_facts[]"))
-        for item in _sequence(raw.get("required_facts"))
+        for item in _array(schema, raw.get("required_facts"), "required_facts")
     )
-    routes = tuple(_from_route(_as_mapping(schema, item, "routes[]")) for item in _sequence(raw.get("routes")))
+    routes = tuple(
+        _from_route(_as_mapping(schema, item, "routes[]"))
+        for item in _array(schema, raw.get("routes"), "routes")
+    )
     return RetrievalPlan(
-        question=str(raw["question"]),
+        question=_string(schema, raw["question"], "question"),
         required_facts=required_facts,
         routes=routes,
-        stop_conditions=tuple(str(item) for item in _sequence(raw.get("stop_conditions"))),
+        stop_conditions=_string_array(schema, raw.get("stop_conditions"), "stop_conditions"),
     )
 
 
 def _from_required_fact(raw: Mapping[str, Any]) -> RequiredFact:
-    _require_fields("RetrievalPlan.required_facts[]", raw, ("id", "description", "priority"))
+    schema = "RetrievalPlan.required_facts[]"
+    _require_fields(schema, raw, ("id", "description", "priority"))
     return RequiredFact(
-        id=str(raw["id"]),
-        description=str(raw["description"]),
-        priority=str(raw["priority"]),
+        id=_string(schema, raw["id"], "id"),
+        description=_string(schema, raw["description"], "description"),
+        priority=_enum(schema, raw["priority"], "priority", ("must", "should", "nice")),
     )
 
 
 def _from_route(raw: Mapping[str, Any]) -> Route:
-    _require_fields("RetrievalPlan.routes[]", raw, ("fact_id", "candidate_corpus_ids", "reason"))
+    schema = "RetrievalPlan.routes[]"
+    _require_fields(schema, raw, ("fact_id", "candidate_corpus_ids", "reason"))
     return Route(
-        fact_id=str(raw["fact_id"]),
-        candidate_corpus_ids=tuple(str(item) for item in _sequence(raw.get("candidate_corpus_ids"))),
-        reason=str(raw["reason"]),
+        fact_id=_string(schema, raw["fact_id"], "fact_id"),
+        candidate_corpus_ids=_string_array(schema, raw.get("candidate_corpus_ids"), "candidate_corpus_ids"),
+        reason=_string(schema, raw["reason"], "reason"),
     )
 
 
@@ -141,19 +194,20 @@ def _from_query_rewrite_result(raw: Mapping[str, Any]) -> QueryRewriteResult:
     return QueryRewriteResult(
         subqueries=tuple(
             _from_subquery(_as_mapping("QueryRewriteResult", item, "subqueries[]"))
-            for item in _sequence(raw.get("subqueries"))
+            for item in _array("QueryRewriteResult", raw.get("subqueries"), "subqueries")
         )
     )
 
 
 def _from_subquery(raw: Mapping[str, Any]) -> Subquery:
-    _require_fields("QueryRewriteResult.subqueries[]", raw, ("id", "fact_id", "query", "target_corpus_ids", "reason"))
+    schema = "QueryRewriteResult.subqueries[]"
+    _require_fields(schema, raw, ("id", "fact_id", "query", "target_corpus_ids", "reason"))
     return Subquery(
-        id=str(raw["id"]),
-        fact_id=str(raw["fact_id"]),
-        query=str(raw["query"]),
-        target_corpus_ids=tuple(str(item) for item in _sequence(raw.get("target_corpus_ids"))),
-        reason=str(raw["reason"]),
+        id=_string(schema, raw["id"], "id"),
+        fact_id=_string(schema, raw["fact_id"], "fact_id"),
+        query=_string(schema, raw["query"], "query"),
+        target_corpus_ids=_string_array(schema, raw.get("target_corpus_ids"), "target_corpus_ids"),
+        reason=_string(schema, raw["reason"], "reason"),
     )
 
 
@@ -174,37 +228,50 @@ def _query_rewrite_result_to_mapping(result: QueryRewriteResult) -> Mapping[str,
 
 def _from_context_assessment(raw: Mapping[str, Any]) -> ContextAssessment:
     return ContextAssessment(
-        status=str(raw["status"]),
-        sufficiency_score=float(raw["sufficiency_score"]),
+        status=_enum(
+            "ContextAssessment",
+            raw["status"],
+            "status",
+            ("sufficient", "insufficient", "irrelevant", "unanswerable"),
+        ),
+        sufficiency_score=_number(
+            "ContextAssessment",
+            raw["sufficiency_score"],
+            "sufficiency_score",
+            minimum=0,
+            maximum=1,
+        ),
         covered_facts=tuple(
             _from_covered_fact(_as_mapping("ContextAssessment", item, "covered_facts[]"))
-            for item in _sequence(raw.get("covered_facts"))
+            for item in _array("ContextAssessment", raw.get("covered_facts"), "covered_facts")
         ),
-        missing_facts=tuple(str(item) for item in _sequence(raw.get("missing_facts"))),
-        unsupported_claims=tuple(str(item) for item in _sequence(raw.get("unsupported_claims"))),
+        missing_facts=_string_array("ContextAssessment", raw.get("missing_facts"), "missing_facts"),
+        unsupported_claims=_string_array("ContextAssessment", raw.get("unsupported_claims"), "unsupported_claims"),
         feedback_queries=tuple(
             _from_feedback_query(_as_mapping("ContextAssessment", item, "feedback_queries[]"))
-            for item in _sequence(raw.get("feedback_queries"))
+            for item in _array("ContextAssessment", raw.get("feedback_queries"), "feedback_queries")
         ),
-        reason=str(raw["reason"]),
+        reason=_string("ContextAssessment", raw["reason"], "reason"),
     )
 
 
 def _from_covered_fact(raw: Mapping[str, Any]) -> CoveredFact:
-    _require_fields("ContextAssessment.covered_facts[]", raw, ("fact_id", "snippet_ids"))
+    schema = "ContextAssessment.covered_facts[]"
+    _require_fields(schema, raw, ("fact_id", "snippet_ids"))
     return CoveredFact(
-        fact_id=str(raw["fact_id"]),
-        snippet_ids=tuple(str(item) for item in _sequence(raw.get("snippet_ids"))),
+        fact_id=_string(schema, raw["fact_id"], "fact_id"),
+        snippet_ids=_string_array(schema, raw.get("snippet_ids"), "snippet_ids"),
     )
 
 
 def _from_feedback_query(raw: Mapping[str, Any]) -> FeedbackQuery:
-    _require_fields("ContextAssessment.feedback_queries[]", raw, ("query", "target_corpus_ids", "reason"))
+    schema = "ContextAssessment.feedback_queries[]"
+    _require_fields(schema, raw, ("query", "target_corpus_ids", "reason"))
     return FeedbackQuery(
-        query=str(raw["query"]),
-        target_corpus_ids=tuple(str(item) for item in _sequence(raw.get("target_corpus_ids"))),
-        reason=str(raw["reason"]),
-        fact_id=str(raw["fact_id"]) if raw.get("fact_id") is not None else None,
+        query=_string(schema, raw["query"], "query"),
+        target_corpus_ids=_string_array(schema, raw.get("target_corpus_ids"), "target_corpus_ids"),
+        reason=_string(schema, raw["reason"], "reason"),
+        fact_id=_string(schema, raw["fact_id"], "fact_id") if raw.get("fact_id") is not None else None,
     )
 
 
@@ -238,22 +305,34 @@ def _feedback_query_to_mapping(feedback: FeedbackQuery) -> Mapping[str, Any]:
 
 def _from_grounded_answer(raw: Mapping[str, Any]) -> GroundedAnswer:
     return GroundedAnswer(
-        answer=str(raw["answer"]),
+        answer=_string("GroundedAnswer", raw["answer"], "answer"),
         citations=tuple(
             _from_grounded_citation(_as_mapping("GroundedAnswer", item, "citations[]"))
-            for item in _sequence(raw.get("citations"))
+            for item in _array("GroundedAnswer", raw.get("citations"), "citations")
         ),
-        status=str(raw["status"]),
-        missing_facts=tuple(str(item) for item in _sequence(raw.get("missing_facts"))),
-        sufficiency_score=float(raw["sufficiency_score"]),
+        status=_enum(
+            "GroundedAnswer",
+            raw["status"],
+            "status",
+            ("answered", "partial", "unanswerable"),
+        ),
+        missing_facts=_string_array("GroundedAnswer", raw.get("missing_facts"), "missing_facts"),
+        sufficiency_score=_number(
+            "GroundedAnswer",
+            raw["sufficiency_score"],
+            "sufficiency_score",
+            minimum=0,
+            maximum=1,
+        ),
     )
 
 
 def _from_grounded_citation(raw: Mapping[str, Any]) -> GroundedCitation:
-    _require_fields("GroundedAnswer.citations[]", raw, ("claim", "snippet_ids"))
+    schema = "GroundedAnswer.citations[]"
+    _require_fields(schema, raw, ("claim", "snippet_ids"))
     return GroundedCitation(
-        claim=str(raw["claim"]),
-        snippet_ids=tuple(str(item) for item in _sequence(raw.get("snippet_ids"))),
+        claim=_string(schema, raw["claim"], "claim"),
+        snippet_ids=_string_array(schema, raw.get("snippet_ids"), "snippet_ids"),
     )
 
 

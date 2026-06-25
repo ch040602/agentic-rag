@@ -6,7 +6,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from agentic_rag.adapters.llm import SchemaValidationError, get_schema, to_dataclass, to_mapping  # noqa: E402
+from agentic_rag.adapters.llm import (  # noqa: E402
+    SchemaValidationError,
+    get_schema,
+    parse_structured_output,
+    to_dataclass,
+    to_mapping,
+)
 from agentic_rag.contracts import (  # noqa: E402
     ContextAssessment,
     GroundedAnswer,
@@ -45,6 +51,27 @@ class LLMAdapterSchemaTests(unittest.TestCase):
         self.assertEqual("person_project", plan.required_facts[0].id)
         self.assertEqual(("directory",), tuple(plan.routes[0].candidate_corpus_ids))
         self.assertEqual(raw_plan, to_mapping("RetrievalPlan", plan))
+
+    def test_parses_structured_json_string_through_registry(self):
+        result = parse_structured_output(
+            "QueryRewriteResult",
+            """
+            {
+              "subqueries": [
+                {
+                  "id": "q0-0",
+                  "fact_id": "project_owner",
+                  "query": "Project Zen owner",
+                  "target_corpus_ids": ["projects"],
+                  "reason": "Project records contain owners."
+                }
+              ]
+            }
+            """,
+        )
+
+        self.assertIsInstance(result, QueryRewriteResult)
+        self.assertEqual("projects", result.subqueries[0].target_corpus_ids[0])
 
     def test_converts_query_rewrite_result_mapping(self):
         result = to_dataclass(
@@ -114,6 +141,46 @@ class LLMAdapterSchemaTests(unittest.TestCase):
             )
 
         self.assertIn("citations", str(error.exception))
+
+    def test_malformed_json_raises_schema_error(self):
+        with self.assertRaises(SchemaValidationError) as error:
+            parse_structured_output("GroundedAnswer", '{"answer": "missing brace"')
+
+        self.assertIn("malformed JSON", str(error.exception))
+
+    def test_wrong_enum_value_raises_schema_error(self):
+        with self.assertRaises(SchemaValidationError) as error:
+            to_dataclass(
+                "GroundedAnswer",
+                {
+                    "answer": "Unsupported status.",
+                    "citations": [],
+                    "status": "complete",
+                    "missing_facts": [],
+                    "sufficiency_score": 1.0,
+                },
+            )
+
+        self.assertIn("status", str(error.exception))
+        self.assertIn("answered", str(error.exception))
+
+    def test_wrong_field_type_raises_schema_error(self):
+        with self.assertRaises(SchemaValidationError) as error:
+            to_dataclass(
+                "QueryRewriteResult",
+                {
+                    "subqueries": {
+                        "id": "q0-0",
+                        "fact_id": "project_owner",
+                        "query": "Project Zen owner",
+                        "target_corpus_ids": ["projects"],
+                        "reason": "Project records contain owners.",
+                    }
+                },
+            )
+
+        self.assertIn("subqueries", str(error.exception))
+        self.assertIn("array", str(error.exception))
 
 
 if __name__ == "__main__":
