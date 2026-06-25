@@ -220,9 +220,28 @@ Planned follow-up work:
 - Evaluation fixtures for multi-hop and cross-corpus benchmarks
 - Conflict-aware synthesis tests
 
+## Referenced Papers
+
+The design is grounded in the following papers and public research artifacts:
+
+- **Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks**  
+  Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Kuttler, Mike Lewis, Wen-tau Yih, Tim Rocktaschel, Sebastian Riedel, and Douwe Kiela. NeurIPS 2020.  
+  This is the foundational RAG paper behind the general retrieve-then-generate framing used throughout this project.  
+  Link: https://arxiv.org/abs/2005.11401
+
+- **Sufficient Context: A New Lens on Retrieval Augmented Generation Systems**  
+  Hailey Joren, Jianyi Zhang, Chun-Sung Ferng, Da-Cheng Juan, Ankur Taly, and Cyrus Rashtchian. ICLR 2025.  
+  This paper motivates the explicit `sufficiency_score`, unsupported-claim checks, and missing-fact feedback queries in the scaffold.  
+  Link: https://arxiv.org/abs/2411.06037
+
+- **Fact, Fetch, and Reason: A Unified Evaluation of Retrieval-Augmented Generation**  
+  Satyapriya Krishna, Kalpesh Krishna, Anhad Mohananey, Steven Schwarcz, Adam Stambler, Shyam Upadhyay, and Manaal Faruqui. arXiv 2024.  
+  This paper introduces FRAMES, the multi-hop RAG evaluation benchmark referenced by Google's Agentic RAG write-up and related FramesQA experiments.  
+  Link: https://arxiv.org/abs/2409.12941
+
 ## Sources
 
-This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. See `references/source-map.md` for source URLs and preserved public facts.
+This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. The Google Research Agentic RAG announcement connects the system to Sufficient Context and FramesQA/FRAMES evaluation, and the Google Cloud documentation describes the Cross Corpus Retrieval product surface. See `references/source-map.md` for source URLs and preserved public facts.
 
 ## License
 
