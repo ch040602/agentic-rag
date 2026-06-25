@@ -20,10 +20,8 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 - [Repository Layout](#repository-layout)
 - [How It Works](#how-it-works)
 - [Core Contracts](#core-contracts)
-- [Quick Start](#quick-start)
-- [Expected Output Shape](#expected-output-shape)
 - [Implementation Rules](#implementation-rules)
-- [Skill Packaging](#skill-packaging)
+- [Install and Use](#install-and-use)
 - [Referenced Papers](#referenced-papers)
 - [Sources](#sources)
 
@@ -114,139 +112,6 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 
 `src/agentic_rag/evaluation.py` provides FRAMES-style fixture and report dataclasses for multi-hop RAG evaluation. It records bridge facts, expected fetches, expected answer terms, expected citations, and distractor corpora, then reports fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count for a `RunResult`. It also compares baseline and candidate runs so single-shot and iterative retrieval strategies can be evaluated side by side.
 
-## Quick Start
-
-This scaffold has no runtime dependencies beyond Python 3.11+.
-
-Install from a source checkout:
-
-```bash
-python -m pip install -e .
-```
-
-Run the tests:
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-When running ad-hoc scripts without installing the package, set `PYTHONPATH=src` before importing `agentic_rag`.
-
-Use the deterministic in-memory components:
-
-```python
-from agentic_rag.adapters.in_memory import (
-    EvidenceCoverageJudge,
-    FeedbackAwareQueryRewriter,
-    InMemoryDocument,
-    InMemoryRetriever,
-    RuleBasedSynthesizer,
-    ScriptedPlanner,
-    SnippetDrafter,
-)
-from agentic_rag.contracts import Corpus, RequiredFact, RetrievalPlan, Route
-from agentic_rag.orchestrator import AgenticRAGOrchestrator, OrchestratorConfig
-
-plan = RetrievalPlan(
-    question="Who owns Alice's project?",
-    required_facts=(
-        RequiredFact(
-            id="person_project",
-            description="Alice's project name",
-            metadata={"required_terms": ("alice", "project zen")},
-        ),
-        RequiredFact(
-            id="project_owner",
-            description="Project Zen owner",
-            metadata={"required_terms": ("project zen", "owner", "nina")},
-        ),
-    ),
-    routes=(
-        Route("person_project", ("directory",), "People records contain assignments."),
-        Route("project_owner", ("projects",), "Project records contain owners."),
-    ),
-)
-
-retriever = InMemoryRetriever(
-    (
-        InMemoryDocument("directory", "people-1", "Alice works on Project Zen."),
-        InMemoryDocument("projects", "project-1", "Project Zen owner is Nina."),
-    )
-)
-
-orchestrator = AgenticRAGOrchestrator(
-    planner=ScriptedPlanner(plan),
-    rewriter=FeedbackAwareQueryRewriter(initial_fact_ids=("person_project",)),
-    retriever=retriever,
-    drafter=SnippetDrafter(),
-    judge=EvidenceCoverageJudge(),
-    synthesizer=RuleBasedSynthesizer(),
-    config=OrchestratorConfig(max_iterations=2),
-)
-
-result = orchestrator.run(
-    "Who owns Alice's project?",
-    (
-        Corpus("directory", "Employee directory and project assignments."),
-        Corpus("projects", "Project ownership records."),
-    ),
-)
-
-print(result.answer.status)
-print(result.answer.sufficiency_score)
-print(result.answer.citations)
-```
-
-## Expected Output Shape
-
-Final answers should be grounded by snippet ids:
-
-```python
-GroundedAnswer(
-    answer="project_owner: [projects:project-1:q1-0]",
-    citations=(
-        GroundedCitation(
-            claim="project_owner",
-            snippet_ids=("projects:project-1:q1-0",),
-        ),
-    ),
-    status=AnswerStatus.ANSWERED,
-    missing_facts=(),
-    sufficiency_score=1.0,
-)
-```
-
-When evidence is missing, the assessment returns targeted follow-up queries:
-
-```python
-ContextAssessment(
-    status=ContextStatus.INSUFFICIENT,
-    sufficiency_score=0.5,
-    missing_facts=("Project Zen owner",),
-    feedback_queries=(
-        FeedbackQuery(
-            query="Project Zen owner",
-            target_corpus_ids=("projects",),
-            reason="Evidence for required fact 'project_owner' was not found.",
-        ),
-    ),
-)
-```
-
-When evidence conflicts, the answer stays partial and cites both incompatible groups:
-
-```python
-GroundedAnswer(
-    answer="Conflicting evidence prevents a definitive grounded answer.",
-    citations=(
-        GroundedCitation("owner:nina", ("projects:project-1:q0-0",)),
-        GroundedCitation("owner:omar", ("projects:project-2:q0-0",)),
-    ),
-    status=AnswerStatus.PARTIAL,
-    sufficiency_score=0.5,
-)
-```
-
 ## Implementation Rules
 
 - Keep provider integrations behind adapters.
@@ -256,17 +121,68 @@ GroundedAnswer(
 - Never return a fully answered result after an insufficient sufficiency check.
 - Enforce iteration and cost limits in the orchestrator or adapter layer.
 
-## Skill Packaging
+## Install and Use
 
-This repository is packaged as an Agent Skill:
+The skill is distributed as a directory containing `SKILL.md`, `references/`, optional `agents/` metadata, and an optional Python scaffold. You can install it as a personal skill or check it into a project so the agent discovers it automatically.
 
-- `SKILL.md` is the skill entrypoint with YAML frontmatter, activation guidance, workflow steps, implementation rules, and anti-patterns.
-- `agents/openai.yaml` provides Codex-facing display metadata and allows implicit invocation.
-- `references/` contains progressively loaded background material, prompt contracts, source mapping, and completion guidance.
-- `src/agentic_rag/` is an optional Python scaffold that agents can reuse when a task needs executable contracts or tests.
-- `tests/` verifies the scaffold behavior without network access or provider credentials.
+### Codex
 
-The skill can be used directly from this folder by clients that scan skill directories, or its Python scaffold can be installed in editable mode for local development.
+Install as a personal Codex skill:
+
+```bash
+mkdir -p ~/.agents/skills
+git clone https://github.com/ch040602/agentic-rag.git ~/.agents/skills/agentic-rag
+```
+
+Use it in Codex CLI or IDE:
+
+```text
+$agentic-rag design a multi-hop RAG pipeline that checks sufficient context before answering
+```
+
+Codex can also activate the skill automatically when your task matches the `description` in `SKILL.md`. If the skill does not appear, restart Codex or open the skill selector with `/skills`.
+
+For a repository-scoped install, place it under the repo:
+
+```bash
+mkdir -p .agents/skills
+git clone https://github.com/ch040602/agentic-rag.git .agents/skills/agentic-rag
+```
+
+### Claude Code
+
+Install as a personal Claude Code skill:
+
+```bash
+mkdir -p ~/.claude/skills
+git clone https://github.com/ch040602/agentic-rag.git ~/.claude/skills/agentic-rag
+```
+
+Use it in Claude Code:
+
+```text
+/agentic-rag Design a RAG workflow that retries retrieval when context is insufficient.
+```
+
+Claude Code can also load the skill automatically when the request is relevant. The command name comes from the installed directory name, so keep the folder named `agentic-rag`.
+
+For a project-scoped install, place it under the repo:
+
+```bash
+mkdir -p .claude/skills
+git clone https://github.com/ch040602/agentic-rag.git .claude/skills/agentic-rag
+```
+
+### Optional Python Scaffold
+
+The Python scaffold is dependency-free and useful for local tests or adapter development:
+
+```bash
+python -m pip install -e ~/.agents/skills/agentic-rag
+python -m unittest discover -s ~/.agents/skills/agentic-rag/tests -v
+```
+
+If you installed the skill somewhere else, replace the path with that location.
 
 ## Referenced Papers
 
