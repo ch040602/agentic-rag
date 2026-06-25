@@ -7,11 +7,11 @@ src/agentic_rag/
 +-- contracts.py       # Stable dataclasses and Protocols
 +-- orchestrator.py    # Agentic loop
 +-- sufficiency.py     # Sufficient-context autorater and abstention policy
++-- evaluation.py      # FRAMES-style fixtures and metrics
 +-- adapters/
 |   +-- llm.py         # TODO-CODEX: provider client + structured output
 |   +-- retriever.py   # TODO-CODEX: vector/BM25/SQL retriever adapters
 |   +-- google_vertex_rag.py  # TODO-CODEX: native Google Cross-Corpus Retrieval mode
-+-- evaluation.py      # TODO-CODEX: multi-hop/cross-corpus eval harness
 ```
 
 ## TODO-CODEX order
@@ -70,8 +70,9 @@ src/agentic_rag/
    - Verify that routing does not search all corpora unless justified.
    - Verify that one missing fact triggers a targeted follow-up query.
    - Report fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
+   - Current evaluation utilities include fixture dataclasses and dependency-free metrics for fact, fetch, reasoning, citation, and iteration reporting.
    - Implement in order:
-     - `RDD-T-00000022`: FRAMES-style fixture format and metrics.
+     - `RDD-T-00000022`: FRAMES-style fixture format and metrics. Completed.
      - `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
 
 8. **Conflict-aware synthesis** (`RDD-T-00000011`)
