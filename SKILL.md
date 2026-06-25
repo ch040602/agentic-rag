@@ -6,30 +6,6 @@ description: >-
   follow-up retrieval, and grounded synthesis with citations. Use for multi-hop
   RAG, multi-source RAG, context sufficiency, or Agent Skill scaffolds based on
   the public Google Research and Google Cloud pattern.
-license: MIT
-compatibility: "Agent Skills-compatible clients including Codex. Python scaffold targets Python 3.11+."
-metadata:
-  version: "0.1.0"
-  origin: "Public Google Research and Google Cloud documentation, summarized as implementation guidance."
-  tags:
-    - agentic-rag
-    - rag
-    - retrieval-augmented-generation
-    - cross-corpus-retrieval
-    - sufficient-context
-    - query-rewriting
-    - grounded-synthesis
-    - codex-skills
-    - python
-tags:
-  - agentic-rag
-  - rag
-  - retrieval-augmented-generation
-  - cross-corpus-retrieval
-  - sufficient-context
-  - query-rewriting
-  - grounded-synthesis
-  - python
 ---
 
 # Agentic RAG

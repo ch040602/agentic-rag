@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any, Literal, Mapping, Protocol, Sequence
 
 
 class FactPriority(str, Enum):
     MUST = "must"
     SHOULD = "should"
     NICE = "nice"
+
+
+AssessmentStatus = Literal["sufficient", "insufficient", "irrelevant", "unanswerable"]
 
 
 class ContextStatus(str, Enum):
@@ -112,8 +115,38 @@ class Claim:
 
 @dataclass(frozen=True)
 class DraftAnswer:
-    claims: Sequence[Claim] = field(default_factory=tuple)
+    """Draft used by both legacy and current callers.
+
+    Legacy callers in earlier revisions used ``text`` + ``cited_snippet_ids`` while
+    the newer pipeline uses ``claims``. Both inputs are supported and normalized.
+    """
+
     text: str = ""
+    claims: Sequence[Claim] = field(default_factory=tuple)
+    cited_snippet_ids: Sequence[str] = field(default_factory=tuple)
+    unsupported_claims: Sequence[str] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        normalized_text = self.text.strip() if isinstance(self.text, str) else ""
+        normalized_claims = tuple(
+            claim if isinstance(claim, Claim) else Claim(str(claim), tuple())
+            for claim in self.claims
+        )
+        normalized_cited = tuple(
+            str(snippet_id)
+            for snippet_id in self.cited_snippet_ids
+        )
+        normalized_unsupported = tuple(str(item) for item in self.unsupported_claims)
+
+        if not normalized_claims and normalized_text and normalized_cited:
+            normalized_claims = (Claim(normalized_text, normalized_cited),)
+        elif not normalized_claims and normalized_text:
+            normalized_claims = (Claim(normalized_text, ()),)
+
+        object.__setattr__(self, "text", normalized_text)
+        object.__setattr__(self, "claims", normalized_claims)
+        object.__setattr__(self, "cited_snippet_ids", normalized_cited)
+        object.__setattr__(self, "unsupported_claims", normalized_unsupported)
 
 
 @dataclass(frozen=True)
@@ -195,6 +228,8 @@ class GroundedAnswer:
     missing_facts: Sequence[str] = field(default_factory=tuple)
     sufficiency_score: float = 0.0
     conflicts: Sequence[ConflictEvidence] = field(default_factory=tuple)
+    iterations: int = 0
+    audit: Mapping[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -213,6 +248,26 @@ class RunResult:
     answer: GroundedAnswer
     iterations: Sequence[IterationTrace]
     snippets: Sequence[Snippet]
+
+
+# Compatibility dataclass names and aliases from earlier package generations.
+@dataclass(frozen=True)
+class IterationState:
+    question: str
+    iteration: int = 0
+    plan: RetrievalPlan | None = None
+    subqueries: Sequence[Subquery] = field(default_factory=tuple)
+    hits: Sequence[Snippet] = field(default_factory=tuple)
+    draft: DraftAnswer | None = None
+    assessment: ContextAssessment | None = None
+    prior_feedback: Sequence[FeedbackQuery] = field(default_factory=tuple)
+
+
+CorpusDescriptor = Corpus
+RetrievalRoute = Route
+SubQuery = Subquery
+RetrievalHit = Snippet
+ClaimCitation = GroundedCitation
 
 
 class Planner(Protocol):

@@ -22,6 +22,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 - [Core Contracts](#core-contracts)
 - [Implementation Rules](#implementation-rules)
 - [Install and Use](#install-and-use)
+- [Validate and Publish](#validate-and-publish)
 - [Referenced Papers](#referenced-papers)
 - [Sources](#sources)
 
@@ -43,6 +44,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 .
 +-- SKILL.md
 +-- README.md
++-- AGENTS.md
 +-- agents/
 |   +-- openai.yaml
 +-- references/
@@ -51,6 +53,8 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 |   +-- codex-completion-brief.md
 |   +-- prompts-and-schemas.md
 |   +-- source-map.md
++-- scripts/
+|   +-- validate_skill.py
 +-- pyproject.toml
 +-- .github/workflows/tests.yml
 +-- src/
@@ -68,6 +72,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
     +-- test_evaluation.py
     +-- test_orchestrator.py
     +-- test_retriever_adapter.py
+    +-- test_skill_metadata.py
     +-- test_sufficiency.py
 ```
 
@@ -123,15 +128,15 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 
 ## Install and Use
 
-The skill is distributed as a directory containing `SKILL.md`, `references/`, optional `agents/` metadata, and an optional Python scaffold. You can install it as a personal skill or check it into a project so the agent discovers it automatically.
+This repository is the canonical distribution package for the `agentic-rag` skill. It contains `SKILL.md`, `references/`, `agents/` metadata, validation scripts, tests, and the optional Python scaffold in one repo.
 
 ### Codex
 
 Install as a personal Codex skill:
 
 ```bash
-mkdir -p ~/.agents/skills
-git clone https://github.com/ch040602/agentic-rag.git ~/.agents/skills/agentic-rag
+mkdir -p ~/.codex/skills
+git clone https://github.com/ch040602/agentic-rag.git ~/.codex/skills/agentic-rag
 ```
 
 Use it in Codex CLI or IDE:
@@ -145,8 +150,8 @@ Codex can also activate the skill automatically when your task matches the `desc
 For a repository-scoped install, place it under the repo:
 
 ```bash
-mkdir -p .agents/skills
-git clone https://github.com/ch040602/agentic-rag.git .agents/skills/agentic-rag
+mkdir -p .codex/skills
+git clone https://github.com/ch040602/agentic-rag.git .codex/skills/agentic-rag
 ```
 
 ### Claude Code
@@ -178,11 +183,45 @@ git clone https://github.com/ch040602/agentic-rag.git .claude/skills/agentic-rag
 The Python scaffold is dependency-free and useful for local tests or adapter development:
 
 ```bash
-python -m pip install -e ~/.agents/skills/agentic-rag
-python -m unittest discover -s ~/.agents/skills/agentic-rag/tests -v
+python -m pip install -e ~/.codex/skills/agentic-rag
+python -m unittest discover -s ~/.codex/skills/agentic-rag/tests -v
 ```
 
 If you installed the skill somewhere else, replace the path with that location.
+
+### Legacy Skill Compatibility (Merged From Agentic-RAG-Skill)
+
+This repository now includes the legacy `Agentic-RAG-Skill` compatibility surface while keeping the modern contracts. `Agentic-RAG-Skill` is no longer managed as a separate distribution repo.
+
+- `AgenticRAGPipeline` for the legacy-style iterative `answer(...)` API.
+- Compatibility adapters (`KeywordPlanner`, `TemplateQueryRewriter`, `InMemoryKeywordRetriever`, `CoverageSufficiencyJudge`, `ExtractiveSynthesizer`).
+- Structured output helper layer (`structured.py`) for legacy JSON output adapters.
+- `VertexRagCrossCorpusRetriever` adapter in `adapters/vertex_rag.py`.
+- Root-level exports in `agentic_rag.__init__` so old import patterns keep working.
+
+You can run a deterministic baseline demo:
+
+```bash
+python examples/in_memory_pipeline.py
+```
+
+## Validate and Publish
+
+Before publishing a change, run both checks from the repository root:
+
+```bash
+python scripts/validate_skill.py
+python -m unittest discover -s tests -v
+```
+
+`scripts/validate_skill.py` verifies that the repo root is installable as a skill package:
+
+- `SKILL.md` has only the runtime frontmatter fields `name` and `description`.
+- Required references, agent metadata, and scaffold files exist.
+- The installed directory name matches the skill name.
+- `SKILL.md` stays concise and uses `references/` for detailed guidance.
+
+The GitHub Actions workflow runs the same validation and unit tests on pushes and pull requests to `main`.
 
 ## Referenced Papers
 
