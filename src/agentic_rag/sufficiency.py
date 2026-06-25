@@ -163,6 +163,7 @@ def apply_selective_abstention_policy(
             status=AnswerStatus.PARTIAL,
             missing_facts=tuple(answer.missing_facts) or tuple(assessment.missing_facts),
             sufficiency_score=assessment.sufficiency_score,
+            conflicts=tuple(answer.conflicts) or tuple(assessment.conflicts),
         )
     return GroundedAnswer(
         answer="No grounded answer is available from the retrieved context.",
@@ -170,6 +171,7 @@ def apply_selective_abstention_policy(
         status=AnswerStatus.UNANSWERABLE,
         missing_facts=tuple(answer.missing_facts) or tuple(assessment.missing_facts),
         sufficiency_score=assessment.sufficiency_score,
+        conflicts=tuple(answer.conflicts) or tuple(assessment.conflicts),
     )
 
 

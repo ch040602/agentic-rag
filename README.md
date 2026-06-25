@@ -85,9 +85,10 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 - `RetrievalPlan`: required facts, routes, and stop conditions.
 - `Subquery`: rewritten query with target corpus ids and lineage fields.
 - `Snippet`: retrieved evidence with corpus id, document id, score, metadata, and optional span.
-- `ContextAssessment`: sufficiency status, `sufficiency_score`, covered facts, missing facts, unsupported claims, and feedback queries.
+- `ConflictEvidence`: incompatible evidence groups for one required fact, with snippet ids for each side of the conflict.
+- `ContextAssessment`: sufficiency status, `sufficiency_score`, covered facts, missing facts, unsupported claims, conflict evidence, and feedback queries.
 - `AnswerabilityLabel`: Sufficient Context answerability labels for sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
-- `GroundedAnswer`: answer text, claim-level citations, status, missing facts, and final sufficiency score.
+- `GroundedAnswer`: answer text, claim-level citations, status, missing facts, final sufficiency score, and optional conflict evidence.
 - `IterationTrace`: subqueries, snippets, draft, and assessment for each loop iteration.
 
 `src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, and assigns Sufficient Context answerability labels. It also provides `apply_selective_abstention_policy`, which maps answerability labels to final answered, partial, or unanswerable outputs before citation validation. Fact matching uses `RequiredFact.metadata["required_terms"]`; optional `conflict_terms` mark incompatible evidence.
@@ -245,6 +246,7 @@ Implemented:
 - Autorater-style sufficiency judge with answerability classification, missing-fact feedback, unsupported-claim checks, and conflict/unanswerable detection
 - Selective generation abstention policy that prevents insufficient context from producing a fully answered result
 - FRAMES-style evaluation fixture, metrics, and run comparison for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count
+- Conflict evidence contracts that preserve incompatible snippet groups through assessment, structured-output conversion, and final answers
 - Unit tests for core loop behavior, structured-output conversion, lexical retrieval, sufficiency judging, abstention, and evaluation metrics
 
 Improvement TODOs completed in this pass:
@@ -266,6 +268,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000021`: Selective generation abstention policy.
 - `RDD-T-00000022`: FRAMES-style fixture format and metrics.
 - `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
+- `RDD-T-00000024`: Conflict evidence contracts.
 
 ## Paper Implementation Roadmap
 
@@ -286,7 +289,7 @@ The next implementation backlog is tracked in `.codex/review-driven-development/
    - `RDD-T-00000022`: Add FRAMES-style fixture format and metrics for facts, retrieval, reasoning, citations, and iterations. Completed.
    - `RDD-T-00000023`: Add iterative-vs-single-shot evaluation tests using a tiny multi-hop fixture. Completed.
 5. `RDD-T-00000011`: Add conflict-aware grounded synthesis. This ensures conflicting snippets are cited and surfaced instead of silently merged.
-   - `RDD-T-00000024`: Add conflict evidence contracts that can cite both incompatible snippet groups.
+   - `RDD-T-00000024`: Add conflict evidence contracts that can cite both incompatible snippet groups. Completed.
    - `RDD-T-00000025`: Implement conflict-aware judge and synthesis behavior for contradictory evidence.
 6. `RDD-T-00000012`: Add Google Cross Corpus Retrieval adapter scaffold. This keeps native Google mode outside the orchestrator while preserving portable mode as the default.
    - `RDD-T-00000026`: Add Google native mode configuration validation for project, location, corpus resources, and service-account assumptions.

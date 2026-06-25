@@ -19,7 +19,7 @@ src/agentic_rag/
 1. **Contracts**
    - Review `contracts.py`.
    - Add fields only if required for the selected backend.
-   - Current scaffold includes claim citations, missing-fact feedback queries, iteration traces, and `sufficiency_score`.
+   - Current scaffold includes claim citations, missing-fact feedback queries, iteration traces, `sufficiency_score`, and conflict evidence groups.
 
 2. **In-memory deterministic backend**
    - Implement a local fake retriever and fake LLM for tests.
@@ -79,8 +79,9 @@ src/agentic_rag/
    - Surface contradictory snippets instead of silently merging them.
    - Cite both sides of a conflict.
    - Return partial or conflict-aware status when a required fact has incompatible evidence.
+   - Current contracts preserve conflict evidence groups in `ContextAssessment`, structured-output conversion, and `GroundedAnswer`.
    - Implement in order:
-     - `RDD-T-00000024`: Conflict evidence contracts.
+     - `RDD-T-00000024`: Conflict evidence contracts. Completed.
      - `RDD-T-00000025`: Conflict-aware judge and synthesis behavior.
 
 9. **Native Google mode** (`RDD-T-00000012`)

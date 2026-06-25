@@ -123,6 +123,20 @@ class CoveredFact:
 
 
 @dataclass(frozen=True)
+class ConflictingEvidenceGroup:
+    label: str
+    snippet_ids: Sequence[str]
+    value: str | None = None
+
+
+@dataclass(frozen=True)
+class ConflictEvidence:
+    fact_id: str
+    groups: Sequence[ConflictingEvidenceGroup]
+    reason: str = ""
+
+
+@dataclass(frozen=True)
 class FeedbackQuery:
     query: str
     target_corpus_ids: Sequence[str]
@@ -137,6 +151,7 @@ class ContextAssessment:
     covered_facts: Sequence[CoveredFact] = field(default_factory=tuple)
     missing_facts: Sequence[str] = field(default_factory=tuple)
     unsupported_claims: Sequence[str] = field(default_factory=tuple)
+    conflicts: Sequence[ConflictEvidence] = field(default_factory=tuple)
     feedback_queries: Sequence[FeedbackQuery] = field(default_factory=tuple)
     reason: str = ""
     answerability: AnswerabilityLabel | str | None = None
@@ -179,6 +194,7 @@ class GroundedAnswer:
     status: AnswerStatus | str
     missing_facts: Sequence[str] = field(default_factory=tuple)
     sufficiency_score: float = 0.0
+    conflicts: Sequence[ConflictEvidence] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)

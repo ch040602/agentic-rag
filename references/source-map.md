@@ -14,6 +14,7 @@ The current scaffold implements the portable subset of the public Agentic RAG pa
 - The deterministic sufficiency judge classifies sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts for offline tests and adapter baselines.
 - Selective generation abstention maps answerability labels to answered, partial, or unanswerable final outputs before citation validation.
 - FRAMES-style evaluation reports fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count for a run result.
+- Conflict evidence contracts preserve incompatible snippet groups for a required fact through context assessment, structured-output conversion, and final answer payloads.
 - The orchestrator stops on sufficient, irrelevant, unanswerable, max iteration, or no-subquery states.
 - Final answers are downgraded when sufficiency fails or citations reference snippets that were not retrieved.
 
@@ -46,7 +47,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 | `RDD-T-00000009` | `RDD-T-00000021` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Selective generation abstention policy that maps answerability to answered, partial, or unanswerable results. Completed in `src/agentic_rag/sufficiency.py` and `src/agentic_rag/orchestrator.py`. |
 | `RDD-T-00000010` | `RDD-T-00000022` | Fact, Fetch, and Reason / FRAMES | Fixture format and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count. Completed in `src/agentic_rag/evaluation.py`. |
 | `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. Completed in `tests/test_evaluation.py`. |
-| `RDD-T-00000011` | `RDD-T-00000024` | Agentic RAG grounded synthesis requirements | Conflict evidence contracts that keep incompatible snippet groups visible and citable. |
+| `RDD-T-00000011` | `RDD-T-00000024` | Agentic RAG grounded synthesis requirements | Conflict evidence contracts that keep incompatible snippet groups visible and citable. Completed in `src/agentic_rag/contracts.py` and `src/agentic_rag/adapters/llm.py`. |
 | `RDD-T-00000011` | `RDD-T-00000025` | Agentic RAG grounded synthesis requirements | Conflict-aware judge and synthesis behavior for contradictory evidence. |
 | `RDD-T-00000012` | `RDD-T-00000026` | Google Cloud Cross Corpus Retrieval docs | Native mode configuration validation for project, location, corpus resources, request mode, and service-account assumptions. |
 | `RDD-T-00000012` | `RDD-T-00000027` | Google Cloud Cross Corpus Retrieval docs | Cross Corpus request adapter seam for `AsyncRetrieveContexts`, `AskContexts`, or equivalent payloads with injected clients. |

@@ -109,9 +109,10 @@ Task:
 1. Check every required fact.
 2. Mark which facts are supported, missing, conflicting, or out of scope.
 3. Identify unsupported claims in the draft.
-4. Decide status: sufficient, insufficient, irrelevant, or unanswerable.
-5. If insufficient, generate targeted feedback queries and candidate corpora.
-6. Never mark sufficient if any must-have fact is unsupported.
+4. For conflicting facts, cite each incompatible snippet group separately.
+5. Decide status: sufficient, insufficient, irrelevant, or unanswerable.
+6. If insufficient, generate targeted feedback queries and candidate corpora.
+7. Never mark sufficient if any must-have fact is unsupported.
 
 Return only JSON matching ContextAssessment.
 ```
@@ -140,6 +141,29 @@ Return only JSON matching ContextAssessment.
     },
     "missing_facts": {"type": "array", "items": {"type": "string"}},
     "unsupported_claims": {"type": "array", "items": {"type": "string"}},
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fact_id", "groups"],
+        "properties": {
+          "fact_id": {"type": "string"},
+          "reason": {"type": "string"},
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "snippet_ids"],
+              "properties": {
+                "label": {"type": "string"},
+                "value": {"type": "string"},
+                "snippet_ids": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          }
+        }
+      }
+    },
     "feedback_queries": {
       "type": "array",
       "items": {
@@ -163,6 +187,7 @@ Return only JSON matching ContextAssessment.
 You are the Synthesis Agent for a grounded Agentic RAG system.
 
 Answer the original question using only supported retrieved snippets. Cite snippet ids for every material claim. Apply the answerability label before final output: sufficient can be answered, useful-but-incomplete and conflicting contexts must be partial with diagnostics, and insufficient or unanswerable contexts must be unanswerable instead of guessed.
+When context is conflicting, preserve each incompatible evidence group and cite the snippets for both sides.
 
 Return only JSON matching GroundedAnswer.
 ```
@@ -188,7 +213,30 @@ Return only JSON matching GroundedAnswer.
     },
     "status": {"type": "string", "enum": ["answered", "partial", "unanswerable"]},
     "missing_facts": {"type": "array", "items": {"type": "string"}},
-    "sufficiency_score": {"type": "number", "minimum": 0, "maximum": 1}
+    "sufficiency_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fact_id", "groups"],
+        "properties": {
+          "fact_id": {"type": "string"},
+          "reason": {"type": "string"},
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["label", "snippet_ids"],
+              "properties": {
+                "label": {"type": "string"},
+                "value": {"type": "string"},
+                "snippet_ids": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
 ```

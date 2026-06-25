@@ -9,6 +9,8 @@ from typing import Any, Callable, Mapping, Sequence
 
 from agentic_rag.contracts import (
     AnswerabilityLabel,
+    ConflictEvidence,
+    ConflictingEvidenceGroup,
     ContextAssessment,
     CoveredFact,
     FeedbackQuery,
@@ -302,6 +304,10 @@ def _from_context_assessment(raw: Mapping[str, Any]) -> ContextAssessment:
         ),
         missing_facts=_string_array("ContextAssessment", raw.get("missing_facts"), "missing_facts"),
         unsupported_claims=_string_array("ContextAssessment", raw.get("unsupported_claims"), "unsupported_claims"),
+        conflicts=tuple(
+            _from_conflict_evidence(_as_mapping("ContextAssessment", item, "conflicts[]"))
+            for item in _array("ContextAssessment", raw.get("conflicts", ()), "conflicts")
+        ),
         feedback_queries=tuple(
             _from_feedback_query(_as_mapping("ContextAssessment", item, "feedback_queries[]"))
             for item in _array("ContextAssessment", raw.get("feedback_queries"), "feedback_queries")
@@ -338,6 +344,29 @@ def _from_feedback_query(raw: Mapping[str, Any]) -> FeedbackQuery:
     )
 
 
+def _from_conflict_evidence(raw: Mapping[str, Any]) -> ConflictEvidence:
+    schema = "ConflictEvidence"
+    _require_fields(schema, raw, ("fact_id", "groups"))
+    return ConflictEvidence(
+        fact_id=_string(schema, raw["fact_id"], "fact_id"),
+        groups=tuple(
+            _from_conflicting_evidence_group(_as_mapping(schema, item, "groups[]"))
+            for item in _array(schema, raw.get("groups"), "groups")
+        ),
+        reason=_string(schema, raw["reason"], "reason") if raw.get("reason") is not None else "",
+    )
+
+
+def _from_conflicting_evidence_group(raw: Mapping[str, Any]) -> ConflictingEvidenceGroup:
+    schema = "ConflictingEvidenceGroup"
+    _require_fields(schema, raw, ("label", "snippet_ids"))
+    return ConflictingEvidenceGroup(
+        label=_string(schema, raw["label"], "label"),
+        snippet_ids=_string_array(schema, raw.get("snippet_ids"), "snippet_ids"),
+        value=_string(schema, raw["value"], "value") if raw.get("value") is not None else None,
+    )
+
+
 def _context_assessment_to_mapping(assessment: ContextAssessment) -> Mapping[str, Any]:
     data: dict[str, Any] = {
         "status": assessment.status.value if hasattr(assessment.status, "value") else str(assessment.status),
@@ -353,6 +382,8 @@ def _context_assessment_to_mapping(assessment: ContextAssessment) -> Mapping[str
         ],
         "reason": assessment.reason,
     }
+    if assessment.conflicts:
+        data["conflicts"] = [_conflict_evidence_to_mapping(conflict) for conflict in assessment.conflicts]
     if assessment.answerability is not None:
         data["answerability"] = assessment.answerability_label.value
     return data
@@ -390,6 +421,10 @@ def _from_grounded_answer(raw: Mapping[str, Any]) -> GroundedAnswer:
             minimum=0,
             maximum=1,
         ),
+        conflicts=tuple(
+            _from_conflict_evidence(_as_mapping("GroundedAnswer", item, "conflicts[]"))
+            for item in _array("GroundedAnswer", raw.get("conflicts", ()), "conflicts")
+        ),
     )
 
 
@@ -403,7 +438,7 @@ def _from_grounded_citation(raw: Mapping[str, Any]) -> GroundedCitation:
 
 
 def _grounded_answer_to_mapping(answer: GroundedAnswer) -> Mapping[str, Any]:
-    return {
+    data: dict[str, Any] = {
         "answer": answer.answer,
         "citations": [
             {"claim": citation.claim, "snippet_ids": list(citation.snippet_ids)}
@@ -412,6 +447,28 @@ def _grounded_answer_to_mapping(answer: GroundedAnswer) -> Mapping[str, Any]:
         "status": answer.status.value if hasattr(answer.status, "value") else str(answer.status),
         "missing_facts": list(answer.missing_facts),
         "sufficiency_score": answer.sufficiency_score,
+    }
+    if answer.conflicts:
+        data["conflicts"] = [_conflict_evidence_to_mapping(conflict) for conflict in answer.conflicts]
+    return data
+
+
+def _conflict_evidence_to_mapping(conflict: ConflictEvidence) -> Mapping[str, Any]:
+    return {
+        "fact_id": conflict.fact_id,
+        "groups": [
+            {
+                key: value
+                for key, value in {
+                    "label": group.label,
+                    "snippet_ids": list(group.snippet_ids),
+                    "value": group.value,
+                }.items()
+                if value is not None
+            }
+            for group in conflict.groups
+        ],
+        "reason": conflict.reason,
     }
 
 

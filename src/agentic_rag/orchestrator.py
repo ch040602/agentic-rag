@@ -147,6 +147,7 @@ class AgenticRAGOrchestrator:
                 status=AnswerStatus.PARTIAL,
                 missing_facts=tuple(answer.missing_facts) or tuple(assessment.missing_facts),
                 sufficiency_score=assessment.sufficiency_score,
+                conflicts=tuple(answer.conflicts) or tuple(assessment.conflicts),
             )
         return answer
 

@@ -17,6 +17,8 @@ from agentic_rag.adapters.llm import (  # noqa: E402
 )
 from agentic_rag.contracts import (  # noqa: E402
     AnswerabilityLabel,
+    ConflictEvidence,
+    ConflictingEvidenceGroup,
     ContextAssessment,
     GroundedAnswer,
     QueryRewriteResult,
@@ -104,6 +106,16 @@ class LLMAdapterSchemaTests(unittest.TestCase):
                 "covered_facts": [{"fact_id": "person_project", "snippet_ids": ["s1"]}],
                 "missing_facts": ["Project owner"],
                 "unsupported_claims": [],
+                "conflicts": [
+                    {
+                        "fact_id": "owner",
+                        "groups": [
+                            {"label": "nina", "snippet_ids": ["s1"], "value": "Nina"},
+                            {"label": "omar", "snippet_ids": ["s2"], "value": "Omar"},
+                        ],
+                        "reason": "Two owner values were found.",
+                    }
+                ],
                 "feedback_queries": [
                     {
                         "query": "Project owner",
@@ -123,6 +135,16 @@ class LLMAdapterSchemaTests(unittest.TestCase):
                 "status": "partial",
                 "missing_facts": ["Project owner"],
                 "sufficiency_score": 0.5,
+                "conflicts": [
+                    {
+                        "fact_id": "owner",
+                        "groups": [
+                            {"label": "nina", "snippet_ids": ["s1"], "value": "Nina"},
+                            {"label": "omar", "snippet_ids": ["s2"], "value": "Omar"},
+                        ],
+                        "reason": "Two owner values were found.",
+                    }
+                ],
             },
         )
 
@@ -131,8 +153,13 @@ class LLMAdapterSchemaTests(unittest.TestCase):
         self.assertEqual(AnswerabilityLabel.USEFUL_BUT_INCOMPLETE, assessment.answerability_label)
         self.assertEqual("useful_but_incomplete", to_mapping("ContextAssessment", assessment)["answerability"])
         self.assertEqual("s1", assessment.covered_facts[0].snippet_ids[0])
+        self.assertIsInstance(assessment.conflicts[0], ConflictEvidence)
+        self.assertIsInstance(assessment.conflicts[0].groups[0], ConflictingEvidenceGroup)
+        self.assertEqual("omar", assessment.conflicts[0].groups[1].label)
+        self.assertEqual("Nina", to_mapping("ContextAssessment", assessment)["conflicts"][0]["groups"][0]["value"])
         self.assertIsInstance(answer, GroundedAnswer)
         self.assertEqual("person_project", answer.citations[0].claim)
+        self.assertEqual("s2", answer.conflicts[0].groups[1].snippet_ids[0])
 
     def test_missing_required_field_raises_schema_error(self):
         with self.assertRaises(SchemaValidationError) as error:

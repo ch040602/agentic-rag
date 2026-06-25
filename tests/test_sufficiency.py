@@ -10,6 +10,8 @@ from agentic_rag.contracts import (  # noqa: E402
     AnswerabilityLabel,
     AnswerStatus,
     Claim,
+    ConflictEvidence,
+    ConflictingEvidenceGroup,
     ContextAssessment,
     ContextStatus,
     DraftAnswer,
@@ -69,6 +71,35 @@ class SufficientContextContractTests(unittest.TestCase):
                 sufficiency_score=0.0,
                 answerability="maybe",
             )
+
+    def test_conflict_evidence_contract_cites_incompatible_snippet_groups(self):
+        conflict = ConflictEvidence(
+            fact_id="owner",
+            groups=(
+                ConflictingEvidenceGroup(label="nina", snippet_ids=("s1",), value="Nina"),
+                ConflictingEvidenceGroup(label="omar", snippet_ids=("s2",), value="Omar"),
+            ),
+            reason="Two owner values were found for the same required fact.",
+        )
+
+        assessment = ContextAssessment(
+            status=ContextStatus.INSUFFICIENT,
+            sufficiency_score=0.5,
+            answerability=AnswerabilityLabel.CONFLICTING,
+            conflicts=(conflict,),
+        )
+        answer = GroundedAnswer(
+            answer="Conflicting context prevents a definitive grounded answer.",
+            citations=(GroundedCitation("owner", ("s1", "s2")),),
+            status=AnswerStatus.PARTIAL,
+            sufficiency_score=0.5,
+            conflicts=(conflict,),
+        )
+
+        self.assertEqual((conflict,), tuple(assessment.conflicts))
+        self.assertEqual((conflict,), tuple(answer.conflicts))
+        self.assertEqual(("s1",), tuple(conflict.groups[0].snippet_ids))
+        self.assertEqual(("s2",), tuple(conflict.groups[1].snippet_ids))
 
 
 class AutoraterStyleSufficiencyJudgeTests(unittest.TestCase):
