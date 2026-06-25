@@ -16,10 +16,13 @@ from agentic_rag.adapters.in_memory import (  # noqa: E402
     SnippetDrafter,
 )
 from agentic_rag.contracts import (  # noqa: E402
+    AnswerabilityLabel,
     AnswerStatus,
     Claim,
+    ContextAssessment,
     ContextStatus,
     Corpus,
+    CoveredFact,
     DraftAnswer,
     GroundedAnswer,
     GroundedCitation,
@@ -185,6 +188,45 @@ class AgenticRAGOrchestratorTests(unittest.TestCase):
 
         self.assertEqual(AnswerStatus.PARTIAL, result.answer.status)
         self.assertEqual((), result.answer.citations)
+
+    def test_answerability_policy_downgrades_useful_incomplete_answer(self):
+        class UsefulIncompleteJudge:
+            def assess(self, question, plan, snippets, draft):
+                return ContextAssessment(
+                    status=ContextStatus.INSUFFICIENT,
+                    sufficiency_score=0.5,
+                    covered_facts=(CoveredFact("person_project", tuple(snippet.id for snippet in snippets)),),
+                    missing_facts=("Project Zen owner",),
+                    answerability=AnswerabilityLabel.USEFUL_BUT_INCOMPLETE,
+                )
+
+        class OvereagerSynthesizer:
+            def synthesize(self, question, plan, snippets, assessment):
+                return GroundedAnswer(
+                    answer="Alice works on Project Zen, so Nina owns it.",
+                    citations=(GroundedCitation("person_project", (snippets[0].id,)),),
+                    status=AnswerStatus.ANSWERED,
+                    sufficiency_score=assessment.sufficiency_score,
+                )
+
+        plan = self.build_two_hop_plan()
+        retriever = InMemoryRetriever((InMemoryDocument("directory", "people-1", "Alice works on Project Zen."),))
+        orchestrator = AgenticRAGOrchestrator(
+            planner=ScriptedPlanner(plan),
+            rewriter=FeedbackAwareQueryRewriter(initial_fact_ids=("person_project",)),
+            retriever=retriever,
+            drafter=SnippetDrafter(),
+            judge=UsefulIncompleteJudge(),
+            synthesizer=OvereagerSynthesizer(),
+            config=OrchestratorConfig(max_iterations=1),
+        )
+
+        result = orchestrator.run(plan.question, (Corpus("directory", "People records."),))
+
+        self.assertEqual(AnswerStatus.PARTIAL, result.answer.status)
+        self.assertEqual(("Project Zen owner",), tuple(result.answer.missing_facts))
+        self.assertIn("Partial evidence", result.answer.answer)
+        self.assertTrue(result.answer.citations)
 
 
 if __name__ == "__main__":

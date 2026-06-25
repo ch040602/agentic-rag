@@ -8,17 +8,23 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from agentic_rag.contracts import (  # noqa: E402
     AnswerabilityLabel,
+    AnswerStatus,
     Claim,
     ContextAssessment,
     ContextStatus,
     DraftAnswer,
     FeedbackQuery,
+    GroundedAnswer,
+    GroundedCitation,
     RequiredFact,
     RetrievalPlan,
     Route,
     Snippet,
 )
-from agentic_rag.sufficiency import AutoraterStyleSufficiencyJudge  # noqa: E402
+from agentic_rag.sufficiency import (  # noqa: E402
+    AutoraterStyleSufficiencyJudge,
+    apply_selective_abstention_policy,
+)
 
 
 class SufficientContextContractTests(unittest.TestCase):
@@ -205,6 +211,108 @@ class AutoraterStyleSufficiencyJudgeTests(unittest.TestCase):
         self.assertEqual(ContextStatus.INSUFFICIENT, assessment.status)
         self.assertEqual(AnswerabilityLabel.INSUFFICIENT, assessment.answerability_label)
         self.assertEqual(("Project Zen budget is approved.",), tuple(assessment.unsupported_claims))
+
+
+class SelectiveAbstentionPolicyTests(unittest.TestCase):
+    def test_sufficient_assessment_keeps_answered_output(self):
+        answer = GroundedAnswer(
+            answer="Project Zen owner is Nina.",
+            citations=(GroundedCitation("owner", ("s1",)),),
+            status=AnswerStatus.ANSWERED,
+            sufficiency_score=1.0,
+        )
+        assessment = ContextAssessment(
+            status=ContextStatus.SUFFICIENT,
+            sufficiency_score=1.0,
+            answerability=AnswerabilityLabel.SUFFICIENT,
+        )
+
+        guarded = apply_selective_abstention_policy(answer, assessment)
+
+        self.assertEqual(AnswerStatus.ANSWERED, guarded.status)
+        self.assertEqual(answer.answer, guarded.answer)
+
+    def test_useful_but_incomplete_answer_becomes_partial_with_diagnostics(self):
+        answer = GroundedAnswer(
+            answer="Alice works on Project Zen, so Nina owns it.",
+            citations=(GroundedCitation("project", ("s1",)),),
+            status=AnswerStatus.ANSWERED,
+            sufficiency_score=0.5,
+        )
+        assessment = ContextAssessment(
+            status=ContextStatus.INSUFFICIENT,
+            sufficiency_score=0.5,
+            missing_facts=("Project Zen owner",),
+            answerability=AnswerabilityLabel.USEFUL_BUT_INCOMPLETE,
+        )
+
+        guarded = apply_selective_abstention_policy(answer, assessment)
+
+        self.assertEqual(AnswerStatus.PARTIAL, guarded.status)
+        self.assertEqual(("Project Zen owner",), tuple(guarded.missing_facts))
+        self.assertEqual(answer.citations, guarded.citations)
+        self.assertIn("Partial evidence", guarded.answer)
+
+    def test_insufficient_context_cannot_remain_answered(self):
+        answer = GroundedAnswer(
+            answer="Project Zen owner is Nina.",
+            citations=(GroundedCitation("owner", ("s1",)),),
+            status=AnswerStatus.ANSWERED,
+            sufficiency_score=0.0,
+        )
+        assessment = ContextAssessment(
+            status=ContextStatus.INSUFFICIENT,
+            sufficiency_score=0.0,
+            missing_facts=("Project Zen owner",),
+            unsupported_claims=("Project Zen owner is Nina.",),
+            answerability=AnswerabilityLabel.INSUFFICIENT,
+        )
+
+        guarded = apply_selective_abstention_policy(answer, assessment)
+
+        self.assertEqual(AnswerStatus.UNANSWERABLE, guarded.status)
+        self.assertEqual((), tuple(guarded.citations))
+        self.assertEqual(("Project Zen owner",), tuple(guarded.missing_facts))
+
+    def test_conflicting_context_becomes_partial_not_answered(self):
+        answer = GroundedAnswer(
+            answer="Project Zen owner is Nina.",
+            citations=(GroundedCitation("owner", ("s1", "s2")),),
+            status=AnswerStatus.ANSWERED,
+            sufficiency_score=0.5,
+        )
+        assessment = ContextAssessment(
+            status=ContextStatus.INSUFFICIENT,
+            sufficiency_score=0.5,
+            answerability=AnswerabilityLabel.CONFLICTING,
+            reason="Found conflicting evidence for required facts: owner.",
+        )
+
+        guarded = apply_selective_abstention_policy(answer, assessment)
+
+        self.assertEqual(AnswerStatus.PARTIAL, guarded.status)
+        self.assertEqual(answer.citations, guarded.citations)
+        self.assertIn("Conflicting context", guarded.answer)
+
+    def test_unanswerable_context_clears_citations(self):
+        answer = GroundedAnswer(
+            answer="Project Zen owner is Nina.",
+            citations=(GroundedCitation("owner", ("s1",)),),
+            status=AnswerStatus.ANSWERED,
+            sufficiency_score=0.0,
+        )
+        assessment = ContextAssessment(
+            status=ContextStatus.UNANSWERABLE,
+            sufficiency_score=0.0,
+            missing_facts=("Project Zen owner",),
+            answerability=AnswerabilityLabel.UNANSWERABLE,
+        )
+
+        guarded = apply_selective_abstention_policy(answer, assessment)
+
+        self.assertEqual(AnswerStatus.UNANSWERABLE, guarded.status)
+        self.assertEqual((), tuple(guarded.citations))
+        self.assertIn("No grounded answer", guarded.answer)
 
 
 def _plan(*facts: RequiredFact) -> RetrievalPlan:

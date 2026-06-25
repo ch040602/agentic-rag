@@ -22,6 +22,7 @@ from .contracts import (
     SufficientContextJudge,
     Synthesizer,
 )
+from .sufficiency import apply_selective_abstention_policy
 
 
 @dataclass(frozen=True)
@@ -126,17 +127,7 @@ class AgenticRAGOrchestrator:
         assessment: ContextAssessment,
         snippets: tuple[Snippet, ...],
     ) -> GroundedAnswer:
-        if (
-            _enum_value(assessment.status) != ContextStatus.SUFFICIENT.value
-            and _enum_value(answer.status) == AnswerStatus.ANSWERED.value
-        ):
-            return GroundedAnswer(
-                answer="Insufficient context for a grounded final answer.",
-                citations=(),
-                status=AnswerStatus.PARTIAL,
-                missing_facts=tuple(assessment.missing_facts),
-                sufficiency_score=assessment.sufficiency_score,
-            )
+        answer = apply_selective_abstention_policy(answer, assessment)
 
         known_snippet_ids = {snippet.id for snippet in snippets}
         grounded_citations = tuple(

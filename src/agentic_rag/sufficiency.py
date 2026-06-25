@@ -8,11 +8,13 @@ from typing import Mapping, Sequence
 
 from agentic_rag.contracts import (
     AnswerabilityLabel,
+    AnswerStatus,
     ContextAssessment,
     ContextStatus,
     CoveredFact,
     DraftAnswer,
     FeedbackQuery,
+    GroundedAnswer,
     RequiredFact,
     RetrievalPlan,
     Route,
@@ -136,6 +138,41 @@ class AutoraterStyleSufficiencyJudge:
         )
 
 
+ANSWERABILITY_STATUS_POLICY = {
+    AnswerabilityLabel.SUFFICIENT: AnswerStatus.ANSWERED,
+    AnswerabilityLabel.USEFUL_BUT_INCOMPLETE: AnswerStatus.PARTIAL,
+    AnswerabilityLabel.CONFLICTING: AnswerStatus.PARTIAL,
+    AnswerabilityLabel.INSUFFICIENT: AnswerStatus.UNANSWERABLE,
+    AnswerabilityLabel.UNANSWERABLE: AnswerStatus.UNANSWERABLE,
+}
+
+
+def apply_selective_abstention_policy(
+    answer: GroundedAnswer,
+    assessment: ContextAssessment,
+) -> GroundedAnswer:
+    """Map answerability labels to answer statuses before final output."""
+
+    target_status = _target_answer_status(assessment)
+    if target_status == AnswerStatus.ANSWERED:
+        return answer
+    if target_status == AnswerStatus.PARTIAL:
+        return GroundedAnswer(
+            answer=_partial_answer_text(answer, assessment),
+            citations=tuple(answer.citations),
+            status=AnswerStatus.PARTIAL,
+            missing_facts=tuple(answer.missing_facts) or tuple(assessment.missing_facts),
+            sufficiency_score=assessment.sufficiency_score,
+        )
+    return GroundedAnswer(
+        answer="No grounded answer is available from the retrieved context.",
+        citations=(),
+        status=AnswerStatus.UNANSWERABLE,
+        missing_facts=tuple(answer.missing_facts) or tuple(assessment.missing_facts),
+        sufficiency_score=assessment.sufficiency_score,
+    )
+
+
 def _snippet_supports_fact(snippet: Snippet, fact: RequiredFact, route: Route | None) -> bool:
     if route and snippet.corpus_id not in route.candidate_corpus_ids:
         return False
@@ -184,3 +221,27 @@ def _metadata_terms(metadata: Mapping[str, object], key: str) -> tuple[str, ...]
 
 def _tokens(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _target_answer_status(assessment: ContextAssessment) -> AnswerStatus:
+    if (
+        assessment.answerability is None
+        and _enum_value(assessment.status) == ContextStatus.INSUFFICIENT.value
+        and assessment.covered_facts
+    ):
+        return AnswerStatus.PARTIAL
+    return ANSWERABILITY_STATUS_POLICY[assessment.answerability_label]
+
+
+def _partial_answer_text(answer: GroundedAnswer, assessment: ContextAssessment) -> str:
+    if assessment.answerability_label == AnswerabilityLabel.CONFLICTING:
+        return "Conflicting context prevents a definitive grounded answer."
+    if answer.status == AnswerStatus.PARTIAL and answer.answer:
+        return answer.answer
+    if assessment.missing_facts:
+        return "Partial evidence found; missing facts remain."
+    return "Insufficient context for a definitive grounded answer."
+
+
+def _enum_value(value: object) -> str:
+    return value.value if hasattr(value, "value") else str(value)

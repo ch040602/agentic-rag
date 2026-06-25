@@ -12,6 +12,7 @@ The current scaffold implements the portable subset of the public Agentic RAG pa
 - Snippets preserve corpus id, document id, score, metadata, and query lineage.
 - Sufficiency assessment returns status, `sufficiency_score`, covered facts, missing facts, unsupported claims, and feedback queries.
 - The deterministic sufficiency judge classifies sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts for offline tests and adapter baselines.
+- Selective generation abstention maps answerability labels to answered, partial, or unanswerable final outputs before citation validation.
 - The orchestrator stops on sufficient, irrelevant, unanswerable, max iteration, or no-subquery states.
 - Final answers are downgraded when sufficiency fails or citations reference snippets that were not retrieved.
 
@@ -21,9 +22,9 @@ These TODOs map the referenced papers and public product docs to concrete implem
 
 | TODO | Source basis | Implementation target |
 |---|---|---|
-| `RDD-T-00000007` | Google Agentic RAG roles and structured prompt schemas | Structured-output LLM adapter contracts, schema validation, and one repair attempt for malformed JSON. |
-| `RDD-T-00000008` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving retriever adapter baseline for non-parametric retrieved memory. |
-| `RDD-T-00000009` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency classification and selective abstention policy. |
+| `RDD-T-00000007` | Google Agentic RAG roles and structured prompt schemas | Structured-output LLM adapter contracts, schema validation, and one repair attempt for malformed JSON. Completed. |
+| `RDD-T-00000008` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving retriever adapter baseline for non-parametric retrieved memory. Completed. |
+| `RDD-T-00000009` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency classification and selective abstention policy. Completed. |
 | `RDD-T-00000010` | Fact, Fetch, and Reason / FRAMES | Multi-hop evaluation harness with fact, fetch, reasoning, citation, and iteration metrics. |
 | `RDD-T-00000011` | Agentic RAG grounded synthesis requirements | Conflict-aware synthesis that cites incompatible evidence instead of merging it silently. |
 | `RDD-T-00000012` | Google Cloud Cross Corpus Retrieval docs | Native Google adapter scaffold with region, IAM, and corpus-resource validation. |
@@ -41,7 +42,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 | `RDD-T-00000008` | `RDD-T-00000018` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Deterministic scoring, ordering, span extraction, and duplicate-document behavior. Completed in `src/agentic_rag/adapters/retriever.py` and `tests/test_retriever_adapter.py`. |
 | `RDD-T-00000009` | `RDD-T-00000019` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Answerability labels for sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts. Completed in `src/agentic_rag/contracts.py`. |
 | `RDD-T-00000009` | `RDD-T-00000020` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency judge with missing facts, unsupported claims, covered facts, and feedback queries. Completed in `src/agentic_rag/sufficiency.py`. |
-| `RDD-T-00000009` | `RDD-T-00000021` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Selective generation abstention policy that maps answerability to answered, partial, or unanswerable results. |
+| `RDD-T-00000009` | `RDD-T-00000021` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Selective generation abstention policy that maps answerability to answered, partial, or unanswerable results. Completed in `src/agentic_rag/sufficiency.py` and `src/agentic_rag/orchestrator.py`. |
 | `RDD-T-00000010` | `RDD-T-00000022` | Fact, Fetch, and Reason / FRAMES | Fixture format and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count. |
 | `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. |
 | `RDD-T-00000011` | `RDD-T-00000024` | Agentic RAG grounded synthesis requirements | Conflict evidence contracts that keep incompatible snippet groups visible and citable. |
@@ -120,7 +121,7 @@ Key public facts to preserve:
 
 Implementation relevance:
 
-- Directly motivates `ContextAssessment`, `sufficiency_score`, `missing_facts`, `unsupported_claims`, answerability labels, targeted feedback queries, and partial/unanswerable answers.
+- Directly motivates `ContextAssessment`, `sufficiency_score`, `missing_facts`, `unsupported_claims`, answerability labels, targeted feedback queries, selective abstention, and partial/unanswerable answers.
 - Supports the guardrail that a final answer should not be marked answered when context is insufficient.
 - Tracked by `RDD-T-00000009`.
 

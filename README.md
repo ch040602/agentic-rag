@@ -87,7 +87,7 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 - `GroundedAnswer`: answer text, claim-level citations, status, missing facts, and final sufficiency score.
 - `IterationTrace`: subqueries, snippets, draft, and assessment for each loop iteration.
 
-`src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, and assigns Sufficient Context answerability labels. It uses `RequiredFact.metadata["required_terms"]` for reproducible fact matching and optional `conflict_terms` for incompatible evidence checks.
+`src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, and assigns Sufficient Context answerability labels. It also provides `apply_selective_abstention_policy`, which maps answerability labels to final answered, partial, or unanswerable outputs before citation validation. Fact matching uses `RequiredFact.metadata["required_terms"]`; optional `conflict_terms` mark incompatible evidence.
 
 ## Quick Start
 
@@ -238,7 +238,8 @@ Implemented:
 - Deterministic lexical retrieval scoring, ordering, and duplicate-document handling
 - Sufficient Context answerability labels that preserve the existing context status API
 - Autorater-style sufficiency judge with answerability classification, missing-fact feedback, unsupported-claim checks, and conflict/unanswerable detection
-- Unit tests for core loop behavior, structured-output conversion, and lexical retrieval
+- Selective generation abstention policy that prevents insufficient context from producing a fully answered result
+- Unit tests for core loop behavior, structured-output conversion, lexical retrieval, sufficiency judging, and abstention
 
 Improvement TODOs completed in this pass:
 
@@ -256,22 +257,23 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000018`: Retrieval scoring and deduplication tests.
 - `RDD-T-00000019`: Sufficient Context answerability categories.
 - `RDD-T-00000020`: Autorater-style sufficiency judge.
+- `RDD-T-00000021`: Selective generation abstention policy.
 
 ## Paper Implementation Roadmap
 
 The next implementation backlog is tracked in `.codex/review-driven-development/todos.jsonl` and ordered to follow the referenced papers and public Agentic RAG write-up. Parent TODOs define the paper-aligned milestones; child TODOs define the implementation sequence.
 
-1. `RDD-T-00000007`: Add structured-output LLM adapter contracts and JSON repair. This maps the planner, query rewriter, sufficiency judge, and synthesizer prompts into validated machine-readable outputs.
+1. `RDD-T-00000007`: Add structured-output LLM adapter contracts and JSON repair. Completed. This maps the planner, query rewriter, sufficiency judge, and synthesizer prompts into validated machine-readable outputs.
    - `RDD-T-00000014`: Define schema registry and dataclass conversion helpers for `RetrievalPlan`, `QueryRewriteResult`, `ContextAssessment`, and `GroundedAnswer`.
    - `RDD-T-00000015`: Add structured JSON parser and validation errors for malformed JSON, wrong enum values, wrong field types, and missing fields. Completed.
    - `RDD-T-00000016`: Add one-shot JSON repair protocol contract with an injected repair callable and tests for success and failure. Completed.
-2. `RDD-T-00000008`: Add retriever adapter baseline with provenance-preserving lexical retrieval. This follows the original RAG paper's emphasis on retrieved non-parametric memory and provenance.
+2. `RDD-T-00000008`: Add retriever adapter baseline with provenance-preserving lexical retrieval. Completed. This follows the original RAG paper's emphasis on retrieved non-parametric memory and provenance.
    - `RDD-T-00000017`: Add provenance-preserving lexical retriever adapter outside the orchestrator. Completed.
    - `RDD-T-00000018`: Add deterministic retrieval scoring, span extraction, and deduplication tests. Completed.
-3. `RDD-T-00000009`: Implement Sufficient Context autorater and abstention policy. This follows the Sufficient Context paper by distinguishing answerable, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
+3. `RDD-T-00000009`: Implement Sufficient Context autorater and abstention policy. Completed. This follows the Sufficient Context paper by distinguishing answerable, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
    - `RDD-T-00000019`: Add answerability categories while preserving the existing context status API. Completed.
    - `RDD-T-00000020`: Implement an autorater-style sufficiency judge that returns missing facts, unsupported claims, covered facts, and feedback queries. Completed.
-   - `RDD-T-00000021`: Add selective generation abstention policy so insufficient contexts cannot produce fully answered results.
+   - `RDD-T-00000021`: Add selective generation abstention policy so insufficient contexts cannot produce fully answered results. Completed.
 4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
    - `RDD-T-00000022`: Add FRAMES-style fixture format and metrics for facts, retrieval, reasoning, citations, and iterations.
    - `RDD-T-00000023`: Add iterative-vs-single-shot evaluation tests using a tiny multi-hop fixture.
