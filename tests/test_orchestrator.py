@@ -21,6 +21,8 @@ from agentic_rag.contracts import (  # noqa: E402
     ContextStatus,
     Corpus,
     DraftAnswer,
+    GroundedAnswer,
+    GroundedCitation,
     RequiredFact,
     RetrievalPlan,
     Route,
@@ -129,6 +131,60 @@ class AgenticRAGOrchestratorTests(unittest.TestCase):
         self.assertEqual(ContextStatus.INSUFFICIENT, assessment.status)
         self.assertIn("Alice's project is Project Zen.", assessment.unsupported_claims)
         self.assertLess(assessment.sufficiency_score, 1.0)
+
+    def test_stops_after_empty_subquery_iteration(self):
+        plan = self.build_two_hop_plan()
+        retriever = InMemoryRetriever(())
+        orchestrator = AgenticRAGOrchestrator(
+            planner=ScriptedPlanner(plan),
+            rewriter=FeedbackAwareQueryRewriter(initial_fact_ids=()),
+            retriever=retriever,
+            drafter=SnippetDrafter(),
+            judge=EvidenceCoverageJudge(),
+            synthesizer=RuleBasedSynthesizer(),
+            config=OrchestratorConfig(max_iterations=3),
+        )
+
+        result = orchestrator.run(plan.question, (Corpus("directory", "People records."),))
+
+        self.assertEqual(1, len(result.iterations))
+        self.assertEqual((), result.iterations[0].subqueries)
+        self.assertEqual([], retriever.calls)
+
+    def test_downgrades_answer_with_unknown_citation_snippet(self):
+        class UnknownCitationSynthesizer:
+            def synthesize(self, question, plan, snippets, assessment):
+                return GroundedAnswer(
+                    answer="Unsupported citation.",
+                    citations=(GroundedCitation("project_owner", ("missing-snippet",)),),
+                    status=AnswerStatus.ANSWERED,
+                    sufficiency_score=assessment.sufficiency_score,
+                )
+
+        corpora = (
+            Corpus("directory", "Employee directory and project assignments."),
+            Corpus("projects", "Project ownership records."),
+        )
+        retriever = InMemoryRetriever(
+            (
+                InMemoryDocument("directory", "people-1", "Alice works on Project Zen."),
+                InMemoryDocument("projects", "project-1", "Project Zen owner is Nina."),
+            )
+        )
+        orchestrator = AgenticRAGOrchestrator(
+            planner=ScriptedPlanner(self.build_two_hop_plan()),
+            rewriter=FeedbackAwareQueryRewriter(),
+            retriever=retriever,
+            drafter=SnippetDrafter(),
+            judge=EvidenceCoverageJudge(),
+            synthesizer=UnknownCitationSynthesizer(),
+            config=OrchestratorConfig(max_iterations=1),
+        )
+
+        result = orchestrator.run("Who owns Alice's project?", corpora)
+
+        self.assertEqual(AnswerStatus.PARTIAL, result.answer.status)
+        self.assertEqual((), result.answer.citations)
 
 
 if __name__ == "__main__":

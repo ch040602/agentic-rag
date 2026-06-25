@@ -83,6 +83,8 @@ class AgenticRAGOrchestrator:
                 ContextStatus.UNANSWERABLE.value,
             }:
                 break
+            if not subqueries:
+                break
 
             prior_assessment = assessment
 
@@ -93,7 +95,7 @@ class AgenticRAGOrchestrator:
             tuple(snippets_by_id.values()),
             final_assessment,
         )
-        answer = self._guard_answer(answer, final_assessment)
+        answer = self._guard_answer(answer, final_assessment, tuple(snippets_by_id.values()))
         return RunResult(
             question=question,
             plan=plan,
@@ -122,6 +124,7 @@ class AgenticRAGOrchestrator:
         self,
         answer: GroundedAnswer,
         assessment: ContextAssessment,
+        snippets: tuple[Snippet, ...],
     ) -> GroundedAnswer:
         if (
             _enum_value(assessment.status) != ContextStatus.SUFFICIENT.value
@@ -135,10 +138,16 @@ class AgenticRAGOrchestrator:
                 sufficiency_score=assessment.sufficiency_score,
             )
 
+        known_snippet_ids = {snippet.id for snippet in snippets}
         grounded_citations = tuple(
-            citation
+            GroundedCitation(
+                claim=citation.claim,
+                snippet_ids=tuple(
+                    snippet_id for snippet_id in citation.snippet_ids if snippet_id in known_snippet_ids
+                ),
+            )
             for citation in answer.citations
-            if citation.snippet_ids
+            if any(snippet_id in known_snippet_ids for snippet_id in citation.snippet_ids)
         )
         if len(grounded_citations) != len(tuple(answer.citations)):
             return GroundedAnswer(

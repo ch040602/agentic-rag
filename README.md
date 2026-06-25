@@ -33,6 +33,8 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 |   +-- codex-completion-brief.md
 |   +-- prompts-and-schemas.md
 |   +-- source-map.md
++-- pyproject.toml
++-- .github/workflows/tests.yml
 +-- src/
 |   +-- agentic_rag/
 |       +-- contracts.py
@@ -82,13 +84,19 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 
 This scaffold has no runtime dependencies beyond Python 3.11+.
 
+Install from a source checkout:
+
+```bash
+python -m pip install -e .
+```
+
 Run the tests:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-When running ad-hoc scripts from a source checkout, set `PYTHONPATH=src` or install the package through your own project tooling before importing `agentic_rag`.
+When running ad-hoc scripts without installing the package, set `PYTHONPATH=src` before importing `agentic_rag`.
 
 Use the deterministic in-memory components:
 
@@ -210,7 +218,19 @@ Implemented:
 - Claim-level citation output
 - Sufficiency scoring
 - Missing-fact feedback queries
+- Editable package installation through `pyproject.toml`
+- GitHub Actions test CI
+- Explicit stop behavior when the rewriter produces no subqueries
+- Citation guard that rejects snippet ids not present in retrieved evidence
 - Unit tests for core loop behavior
+
+Improvement TODOs completed in this pass:
+
+- `RDD-T-00000002`: Packaging metadata for editable installs.
+- `RDD-T-00000003`: GitHub Actions test CI.
+- `RDD-T-00000004`: Empty-subquery stop behavior.
+- `RDD-T-00000005`: Citation provenance guard.
+- `RDD-T-00000006`: README and source-map roadmap alignment.
 
 Planned follow-up work:
 
@@ -241,7 +261,7 @@ The design is grounded in the following papers and public research artifacts:
 
 ## Sources
 
-This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. The Google Research Agentic RAG announcement connects the system to Sufficient Context and FramesQA/FRAMES evaluation, and the Google Cloud documentation describes the Cross Corpus Retrieval product surface. See `references/source-map.md` for source URLs and preserved public facts.
+This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. The Google Research Agentic RAG announcement connects the system to Sufficient Context and FramesQA/FRAMES evaluation, and the Google Cloud documentation describes the Cross Corpus Retrieval product surface. See `references/source-map.md` for source URLs, referenced papers, and implementation alignment notes.
 
 ## License
 
