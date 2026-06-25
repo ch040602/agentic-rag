@@ -9,6 +9,12 @@ from typing import Mapping, Sequence
 from agentic_rag.contracts import Snippet, Subquery
 
 
+LEXICAL_SCORING_RULE = (
+    "Score = number of unique overlapping query terms plus 2.0 for an exact phrase match; "
+    "results are ordered by score descending, then corpus_id, document_id, and snippet id."
+)
+
+
 @dataclass(frozen=True)
 class LexicalDocument:
     corpus_id: str
@@ -38,7 +44,7 @@ class LexicalRetriever:
         if not query_terms:
             return ()
 
-        matches: list[Snippet] = []
+        matches_by_document: dict[tuple[str, str], Snippet] = {}
         for document in self.documents:
             if document.corpus_id not in subquery.target_corpus_ids:
                 continue
@@ -51,21 +57,27 @@ class LexicalRetriever:
 
             score = float(len(overlap)) + (2.0 if phrase_span is not None else 0.0)
             span = phrase_span or _overlap_span(token_matches, overlap)
-            matches.append(
-                Snippet(
-                    id=f"{document.corpus_id}:{document.document_id}:{subquery.id}",
-                    corpus_id=document.corpus_id,
-                    document_id=document.document_id,
-                    text=document.text,
-                    score=score,
-                    metadata=document.metadata,
-                    span=span,
-                    query_id=subquery.id,
-                    fact_id=subquery.fact_id,
-                )
+            snippet = Snippet(
+                id=f"{document.corpus_id}:{document.document_id}:{subquery.id}",
+                corpus_id=document.corpus_id,
+                document_id=document.document_id,
+                text=document.text,
+                score=score,
+                metadata=document.metadata,
+                span=span,
+                query_id=subquery.id,
+                fact_id=subquery.fact_id,
             )
+            document_key = (document.corpus_id, document.document_id)
+            existing = matches_by_document.get(document_key)
+            if existing is None or _sort_key(snippet) < _sort_key(existing):
+                matches_by_document[document_key] = snippet
 
-        return tuple(sorted(matches, key=lambda snippet: snippet.score, reverse=True)[: self.per_query_limit])
+        return tuple(sorted(matches_by_document.values(), key=_sort_key)[: self.per_query_limit])
+
+
+def _sort_key(snippet: Snippet) -> tuple[float, str, str, str]:
+    return (-snippet.score, snippet.corpus_id, snippet.document_id, snippet.id)
 
 
 def _tokens(text: str) -> set[str]:

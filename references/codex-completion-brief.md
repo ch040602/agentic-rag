@@ -47,9 +47,10 @@ src/agentic_rag/
    - Preserve snippet provenance.
    - Include corpus id and document id for every hit.
    - Current scaffold includes a dependency-free lexical retriever in `src/agentic_rag/adapters/retriever.py`.
+   - Lexical scoring is deterministic: unique overlapping query terms plus an exact-phrase bonus, then provenance-key tie-breaking.
    - Implement in order:
      - `RDD-T-00000017`: Provenance-preserving lexical retriever adapter. Completed.
-     - `RDD-T-00000018`: Retrieval scoring and deduplication tests.
+     - `RDD-T-00000018`: Retrieval scoring and deduplication tests. Completed.
 
 6. **Sufficient Context Judge** (`RDD-T-00000009`)
    - It must inspect original question, plan, snippets, and draft.

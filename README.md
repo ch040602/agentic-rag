@@ -230,6 +230,7 @@ Implemented:
 - Structured JSON parsing with explicit validation errors for malformed JSON, enum mismatches, field type mismatches, and missing fields
 - One-shot structured output repair protocol with injected repair callable and strict revalidation
 - Provenance-preserving lexical retriever adapter with routed corpus filtering and snippet spans
+- Deterministic lexical retrieval scoring, ordering, and duplicate-document handling
 - Unit tests for core loop behavior, structured-output conversion, and lexical retrieval
 
 Improvement TODOs completed in this pass:
@@ -245,6 +246,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000015`: Structured JSON parser and validation errors.
 - `RDD-T-00000016`: One-shot structured output repair protocol contract.
 - `RDD-T-00000017`: Provenance-preserving lexical retriever adapter.
+- `RDD-T-00000018`: Retrieval scoring and deduplication tests.
 
 ## Paper Implementation Roadmap
 
@@ -256,7 +258,7 @@ The next implementation backlog is tracked in `.codex/review-driven-development/
    - `RDD-T-00000016`: Add one-shot JSON repair protocol contract with an injected repair callable and tests for success and failure. Completed.
 2. `RDD-T-00000008`: Add retriever adapter baseline with provenance-preserving lexical retrieval. This follows the original RAG paper's emphasis on retrieved non-parametric memory and provenance.
    - `RDD-T-00000017`: Add provenance-preserving lexical retriever adapter outside the orchestrator. Completed.
-   - `RDD-T-00000018`: Add deterministic retrieval scoring, span extraction, and deduplication tests.
+   - `RDD-T-00000018`: Add deterministic retrieval scoring, span extraction, and deduplication tests. Completed.
 3. `RDD-T-00000009`: Implement Sufficient Context autorater and abstention policy. This follows the Sufficient Context paper by distinguishing answerable, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
    - `RDD-T-00000019`: Add answerability categories while preserving the existing context status API.
    - `RDD-T-00000020`: Implement an autorater-style sufficiency judge that returns missing facts, unsupported claims, covered facts, and feedback queries.
