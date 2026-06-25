@@ -124,6 +124,7 @@ Return only JSON matching ContextAssessment.
   "required": ["status", "sufficiency_score", "covered_facts", "missing_facts", "unsupported_claims", "feedback_queries", "reason"],
   "properties": {
     "status": {"type": "string", "enum": ["sufficient", "insufficient", "irrelevant", "unanswerable"]},
+    "answerability": {"type": "string", "enum": ["sufficient", "useful_but_incomplete", "insufficient", "conflicting", "unanswerable"]},
     "sufficiency_score": {"type": "number", "minimum": 0, "maximum": 1},
     "confidence": {"type": "number", "minimum": 0, "maximum": 1, "description": "Backward-compatible alias for sufficiency_score."},
     "covered_facts": {

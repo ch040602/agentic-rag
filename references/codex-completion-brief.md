@@ -56,8 +56,9 @@ src/agentic_rag/
    - It must inspect original question, plan, snippets, and draft.
    - It must return missing facts and feedback queries when insufficient.
    - Add answerability categories and selective abstention behavior inspired by the Sufficient Context paper.
+   - Current contracts include `AnswerabilityLabel` while preserving the existing `ContextAssessment.status` API.
    - Implement in order:
-     - `RDD-T-00000019`: Sufficient Context answerability categories.
+     - `RDD-T-00000019`: Sufficient Context answerability categories. Completed.
      - `RDD-T-00000020`: Autorater-style sufficiency judge.
      - `RDD-T-00000021`: Selective generation abstention policy.
 

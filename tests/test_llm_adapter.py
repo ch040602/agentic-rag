@@ -16,6 +16,7 @@ from agentic_rag.adapters.llm import (  # noqa: E402
     to_mapping,
 )
 from agentic_rag.contracts import (  # noqa: E402
+    AnswerabilityLabel,
     ContextAssessment,
     GroundedAnswer,
     QueryRewriteResult,
@@ -111,6 +112,7 @@ class LLMAdapterSchemaTests(unittest.TestCase):
                     }
                 ],
                 "reason": "One fact is missing.",
+                "answerability": "useful_but_incomplete",
             },
         )
         answer = to_dataclass(
@@ -126,6 +128,8 @@ class LLMAdapterSchemaTests(unittest.TestCase):
 
         self.assertIsInstance(assessment, ContextAssessment)
         self.assertEqual(("Project owner",), tuple(assessment.missing_facts))
+        self.assertEqual(AnswerabilityLabel.USEFUL_BUT_INCOMPLETE, assessment.answerability_label)
+        self.assertEqual("useful_but_incomplete", to_mapping("ContextAssessment", assessment)["answerability"])
         self.assertEqual("s1", assessment.covered_facts[0].snippet_ids[0])
         self.assertIsInstance(answer, GroundedAnswer)
         self.assertEqual("person_project", answer.citations[0].claim)

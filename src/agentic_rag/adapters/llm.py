@@ -8,6 +8,7 @@ from json import JSONDecodeError
 from typing import Any, Callable, Mapping, Sequence
 
 from agentic_rag.contracts import (
+    AnswerabilityLabel,
     ContextAssessment,
     CoveredFact,
     FeedbackQuery,
@@ -306,6 +307,14 @@ def _from_context_assessment(raw: Mapping[str, Any]) -> ContextAssessment:
             for item in _array("ContextAssessment", raw.get("feedback_queries"), "feedback_queries")
         ),
         reason=_string("ContextAssessment", raw["reason"], "reason"),
+        answerability=_enum(
+            "ContextAssessment",
+            raw["answerability"],
+            "answerability",
+            tuple(label.value for label in AnswerabilityLabel),
+        )
+        if raw.get("answerability") is not None
+        else None,
     )
 
 
@@ -330,7 +339,7 @@ def _from_feedback_query(raw: Mapping[str, Any]) -> FeedbackQuery:
 
 
 def _context_assessment_to_mapping(assessment: ContextAssessment) -> Mapping[str, Any]:
-    return {
+    data: dict[str, Any] = {
         "status": assessment.status.value if hasattr(assessment.status, "value") else str(assessment.status),
         "sufficiency_score": assessment.sufficiency_score,
         "covered_facts": [
@@ -344,6 +353,9 @@ def _context_assessment_to_mapping(assessment: ContextAssessment) -> Mapping[str
         ],
         "reason": assessment.reason,
     }
+    if assessment.answerability is not None:
+        data["answerability"] = assessment.answerability_label.value
+    return data
 
 
 def _feedback_query_to_mapping(feedback: FeedbackQuery) -> Mapping[str, Any]:

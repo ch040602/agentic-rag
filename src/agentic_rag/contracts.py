@@ -20,6 +20,14 @@ class ContextStatus(str, Enum):
     UNANSWERABLE = "unanswerable"
 
 
+class AnswerabilityLabel(str, Enum):
+    SUFFICIENT = "sufficient"
+    USEFUL_BUT_INCOMPLETE = "useful_but_incomplete"
+    INSUFFICIENT = "insufficient"
+    CONFLICTING = "conflicting"
+    UNANSWERABLE = "unanswerable"
+
+
 class AnswerStatus(str, Enum):
     ANSWERED = "answered"
     PARTIAL = "partial"
@@ -131,15 +139,31 @@ class ContextAssessment:
     unsupported_claims: Sequence[str] = field(default_factory=tuple)
     feedback_queries: Sequence[FeedbackQuery] = field(default_factory=tuple)
     reason: str = ""
+    answerability: AnswerabilityLabel | str | None = None
 
     def __post_init__(self) -> None:
         if not 0 <= self.sufficiency_score <= 1:
             raise ValueError("sufficiency_score must be between 0 and 1")
+        if self.answerability is not None:
+            AnswerabilityLabel(_enum_value(self.answerability))
 
     @property
     def confidence(self) -> float:
         """Compatibility alias for schemas that name this score confidence."""
         return self.sufficiency_score
+
+    @property
+    def answerability_label(self) -> AnswerabilityLabel:
+        if self.answerability is not None:
+            return AnswerabilityLabel(_enum_value(self.answerability))
+        status = _enum_value(self.status)
+        if status == ContextStatus.SUFFICIENT.value:
+            return AnswerabilityLabel.SUFFICIENT
+        if status == ContextStatus.UNANSWERABLE.value:
+            return AnswerabilityLabel.UNANSWERABLE
+        if status == ContextStatus.IRRELEVANT.value:
+            return AnswerabilityLabel.UNANSWERABLE
+        return AnswerabilityLabel.INSUFFICIENT
 
 
 @dataclass(frozen=True)
@@ -226,3 +250,7 @@ class Synthesizer(Protocol):
         assessment: ContextAssessment,
     ) -> GroundedAnswer:
         ...
+
+
+def _enum_value(value: object) -> str:
+    return value.value if hasattr(value, "value") else str(value)
