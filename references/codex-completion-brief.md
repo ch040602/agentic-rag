@@ -36,8 +36,9 @@ src/agentic_rag/
    - Convert prompts in `prompts-and-schemas.md` to provider-specific schemas.
    - Validate outputs before using them.
    - Retry malformed JSON once with a repair instruction.
+   - Current scaffold includes dependency-free schema registry and dataclass conversion helpers in `src/agentic_rag/adapters/llm.py`.
    - Implement in order:
-     - `RDD-T-00000014`: Schema registry and dataclass conversion helpers.
+     - `RDD-T-00000014`: Schema registry and dataclass conversion helpers. Completed.
      - `RDD-T-00000015`: Structured JSON parser and validation errors.
      - `RDD-T-00000016`: One-shot JSON repair protocol contract.
 

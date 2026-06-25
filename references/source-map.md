@@ -33,7 +33,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 
 | Parent TODO | Child TODO | Source basis | Implementation target |
 |---|---|---|---|
-| `RDD-T-00000007` | `RDD-T-00000014` | Google Agentic RAG roles and structured prompt schemas | Schema registry and dataclass conversion helpers for planner, rewriter, judge, and synthesizer outputs. |
+| `RDD-T-00000007` | `RDD-T-00000014` | Google Agentic RAG roles and structured prompt schemas | Schema registry and dataclass conversion helpers for planner, rewriter, judge, and synthesizer outputs. Completed in `src/agentic_rag/adapters/llm.py`. |
 | `RDD-T-00000007` | `RDD-T-00000015` | Google Agentic RAG structured output requirement | Strict JSON parser and validation errors for malformed or schema-invalid model output. |
 | `RDD-T-00000007` | `RDD-T-00000016` | Production structured-output repair pattern | One-shot repair protocol contract with explicit malformed output, error list, and schema name. |
 | `RDD-T-00000008` | `RDD-T-00000017` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving lexical retriever adapter with corpus, document, query, score, metadata, span, and fact lineage. |

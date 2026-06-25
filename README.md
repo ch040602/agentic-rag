@@ -40,8 +40,10 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 |       +-- contracts.py
 |       +-- orchestrator.py
 |       +-- adapters/
+|           +-- llm.py
 |           +-- in_memory.py
 +-- tests/
+    +-- test_llm_adapter.py
     +-- test_orchestrator.py
 ```
 
@@ -222,7 +224,9 @@ Implemented:
 - GitHub Actions test CI
 - Explicit stop behavior when the rewriter produces no subqueries
 - Citation guard that rejects snippet ids not present in retrieved evidence
+- Structured-output schema registry and dataclass conversion helpers for LLM adapters
 - Unit tests for core loop behavior
+  and structured-output conversion
 
 Improvement TODOs completed in this pass:
 
@@ -233,6 +237,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000006`: README and source-map roadmap alignment.
 - `RDD-T-00000013`: Paper implementation TODO roadmap.
 - `RDD-T-00000029`: Decomposed paper implementation TODO documentation.
+- `RDD-T-00000014`: Structured-output schema registry and dataclass conversion helpers.
 
 ## Paper Implementation Roadmap
 

@@ -1,0 +1,310 @@
+"""Structured-output schema helpers for LLM provider adapters."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Callable, Mapping, Sequence, TypeVar
+
+from agentic_rag.contracts import (
+    ContextAssessment,
+    CoveredFact,
+    FeedbackQuery,
+    GroundedAnswer,
+    GroundedCitation,
+    QueryRewriteResult,
+    RequiredFact,
+    RetrievalPlan,
+    Route,
+    Subquery,
+)
+
+
+T = TypeVar("T")
+
+
+class SchemaValidationError(ValueError):
+    """Raised when a structured-output mapping cannot satisfy a schema contract."""
+
+    def __init__(self, schema_name: str, message: str) -> None:
+        self.schema_name = schema_name
+        super().__init__(f"{schema_name}: {message}")
+
+
+@dataclass(frozen=True)
+class SchemaSpec:
+    name: str
+    target_type: type
+    required_fields: Sequence[str]
+    from_mapping: Callable[[Mapping[str, Any]], Any]
+    to_mapping: Callable[[Any], Mapping[str, Any]]
+
+
+def get_schema(schema_name: str) -> SchemaSpec:
+    try:
+        return SCHEMA_REGISTRY[schema_name]
+    except KeyError as exc:
+        raise SchemaValidationError(schema_name, "unknown schema") from exc
+
+
+def to_dataclass(schema_name: str, raw: Mapping[str, Any]) -> Any:
+    spec = get_schema(schema_name)
+    _require_fields(schema_name, raw, spec.required_fields)
+    return spec.from_mapping(raw)
+
+
+def to_mapping(schema_name: str, value: Any) -> Mapping[str, Any]:
+    spec = get_schema(schema_name)
+    if not isinstance(value, spec.target_type):
+        raise SchemaValidationError(schema_name, f"expected {spec.target_type.__name__}")
+    return spec.to_mapping(value)
+
+
+def _require_fields(schema_name: str, raw: Mapping[str, Any], fields: Sequence[str]) -> None:
+    missing = tuple(field for field in fields if field not in raw)
+    if missing:
+        raise SchemaValidationError(schema_name, "missing required field(s): " + ", ".join(missing))
+
+
+def _as_mapping(schema_name: str, value: object, path: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise SchemaValidationError(schema_name, f"{path} must be an object")
+    return value
+
+
+def _sequence(value: object) -> Sequence[Any]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, bytes)):
+        return (value,)
+    if isinstance(value, Sequence):
+        return value
+    return (value,)
+
+
+def _from_retrieval_plan(raw: Mapping[str, Any]) -> RetrievalPlan:
+    schema = "RetrievalPlan"
+    required_facts = tuple(
+        _from_required_fact(_as_mapping(schema, item, "required_facts[]"))
+        for item in _sequence(raw.get("required_facts"))
+    )
+    routes = tuple(_from_route(_as_mapping(schema, item, "routes[]")) for item in _sequence(raw.get("routes")))
+    return RetrievalPlan(
+        question=str(raw["question"]),
+        required_facts=required_facts,
+        routes=routes,
+        stop_conditions=tuple(str(item) for item in _sequence(raw.get("stop_conditions"))),
+    )
+
+
+def _from_required_fact(raw: Mapping[str, Any]) -> RequiredFact:
+    _require_fields("RetrievalPlan.required_facts[]", raw, ("id", "description", "priority"))
+    return RequiredFact(
+        id=str(raw["id"]),
+        description=str(raw["description"]),
+        priority=str(raw["priority"]),
+    )
+
+
+def _from_route(raw: Mapping[str, Any]) -> Route:
+    _require_fields("RetrievalPlan.routes[]", raw, ("fact_id", "candidate_corpus_ids", "reason"))
+    return Route(
+        fact_id=str(raw["fact_id"]),
+        candidate_corpus_ids=tuple(str(item) for item in _sequence(raw.get("candidate_corpus_ids"))),
+        reason=str(raw["reason"]),
+    )
+
+
+def _retrieval_plan_to_mapping(plan: RetrievalPlan) -> Mapping[str, Any]:
+    return {
+        "question": plan.question,
+        "required_facts": [
+            {
+                "id": fact.id,
+                "description": fact.description,
+                "priority": fact.priority.value if hasattr(fact.priority, "value") else str(fact.priority),
+            }
+            for fact in plan.required_facts
+        ],
+        "routes": [
+            {
+                "fact_id": route.fact_id,
+                "candidate_corpus_ids": list(route.candidate_corpus_ids),
+                "reason": route.reason,
+            }
+            for route in plan.routes
+        ],
+        "stop_conditions": list(plan.stop_conditions),
+    }
+
+
+def _from_query_rewrite_result(raw: Mapping[str, Any]) -> QueryRewriteResult:
+    return QueryRewriteResult(
+        subqueries=tuple(
+            _from_subquery(_as_mapping("QueryRewriteResult", item, "subqueries[]"))
+            for item in _sequence(raw.get("subqueries"))
+        )
+    )
+
+
+def _from_subquery(raw: Mapping[str, Any]) -> Subquery:
+    _require_fields("QueryRewriteResult.subqueries[]", raw, ("id", "fact_id", "query", "target_corpus_ids", "reason"))
+    return Subquery(
+        id=str(raw["id"]),
+        fact_id=str(raw["fact_id"]),
+        query=str(raw["query"]),
+        target_corpus_ids=tuple(str(item) for item in _sequence(raw.get("target_corpus_ids"))),
+        reason=str(raw["reason"]),
+    )
+
+
+def _query_rewrite_result_to_mapping(result: QueryRewriteResult) -> Mapping[str, Any]:
+    return {
+        "subqueries": [
+            {
+                "id": subquery.id,
+                "fact_id": subquery.fact_id,
+                "query": subquery.query,
+                "target_corpus_ids": list(subquery.target_corpus_ids),
+                "reason": subquery.reason,
+            }
+            for subquery in result.subqueries
+        ]
+    }
+
+
+def _from_context_assessment(raw: Mapping[str, Any]) -> ContextAssessment:
+    return ContextAssessment(
+        status=str(raw["status"]),
+        sufficiency_score=float(raw["sufficiency_score"]),
+        covered_facts=tuple(
+            _from_covered_fact(_as_mapping("ContextAssessment", item, "covered_facts[]"))
+            for item in _sequence(raw.get("covered_facts"))
+        ),
+        missing_facts=tuple(str(item) for item in _sequence(raw.get("missing_facts"))),
+        unsupported_claims=tuple(str(item) for item in _sequence(raw.get("unsupported_claims"))),
+        feedback_queries=tuple(
+            _from_feedback_query(_as_mapping("ContextAssessment", item, "feedback_queries[]"))
+            for item in _sequence(raw.get("feedback_queries"))
+        ),
+        reason=str(raw["reason"]),
+    )
+
+
+def _from_covered_fact(raw: Mapping[str, Any]) -> CoveredFact:
+    _require_fields("ContextAssessment.covered_facts[]", raw, ("fact_id", "snippet_ids"))
+    return CoveredFact(
+        fact_id=str(raw["fact_id"]),
+        snippet_ids=tuple(str(item) for item in _sequence(raw.get("snippet_ids"))),
+    )
+
+
+def _from_feedback_query(raw: Mapping[str, Any]) -> FeedbackQuery:
+    _require_fields("ContextAssessment.feedback_queries[]", raw, ("query", "target_corpus_ids", "reason"))
+    return FeedbackQuery(
+        query=str(raw["query"]),
+        target_corpus_ids=tuple(str(item) for item in _sequence(raw.get("target_corpus_ids"))),
+        reason=str(raw["reason"]),
+        fact_id=str(raw["fact_id"]) if raw.get("fact_id") is not None else None,
+    )
+
+
+def _context_assessment_to_mapping(assessment: ContextAssessment) -> Mapping[str, Any]:
+    return {
+        "status": assessment.status.value if hasattr(assessment.status, "value") else str(assessment.status),
+        "sufficiency_score": assessment.sufficiency_score,
+        "covered_facts": [
+            {"fact_id": fact.fact_id, "snippet_ids": list(fact.snippet_ids)}
+            for fact in assessment.covered_facts
+        ],
+        "missing_facts": list(assessment.missing_facts),
+        "unsupported_claims": list(assessment.unsupported_claims),
+        "feedback_queries": [
+            _feedback_query_to_mapping(feedback) for feedback in assessment.feedback_queries
+        ],
+        "reason": assessment.reason,
+    }
+
+
+def _feedback_query_to_mapping(feedback: FeedbackQuery) -> Mapping[str, Any]:
+    data: dict[str, Any] = {
+        "query": feedback.query,
+        "target_corpus_ids": list(feedback.target_corpus_ids),
+        "reason": feedback.reason,
+    }
+    if feedback.fact_id is not None:
+        data["fact_id"] = feedback.fact_id
+    return data
+
+
+def _from_grounded_answer(raw: Mapping[str, Any]) -> GroundedAnswer:
+    return GroundedAnswer(
+        answer=str(raw["answer"]),
+        citations=tuple(
+            _from_grounded_citation(_as_mapping("GroundedAnswer", item, "citations[]"))
+            for item in _sequence(raw.get("citations"))
+        ),
+        status=str(raw["status"]),
+        missing_facts=tuple(str(item) for item in _sequence(raw.get("missing_facts"))),
+        sufficiency_score=float(raw["sufficiency_score"]),
+    )
+
+
+def _from_grounded_citation(raw: Mapping[str, Any]) -> GroundedCitation:
+    _require_fields("GroundedAnswer.citations[]", raw, ("claim", "snippet_ids"))
+    return GroundedCitation(
+        claim=str(raw["claim"]),
+        snippet_ids=tuple(str(item) for item in _sequence(raw.get("snippet_ids"))),
+    )
+
+
+def _grounded_answer_to_mapping(answer: GroundedAnswer) -> Mapping[str, Any]:
+    return {
+        "answer": answer.answer,
+        "citations": [
+            {"claim": citation.claim, "snippet_ids": list(citation.snippet_ids)}
+            for citation in answer.citations
+        ],
+        "status": answer.status.value if hasattr(answer.status, "value") else str(answer.status),
+        "missing_facts": list(answer.missing_facts),
+        "sufficiency_score": answer.sufficiency_score,
+    }
+
+
+SCHEMA_REGISTRY: Mapping[str, SchemaSpec] = {
+    "RetrievalPlan": SchemaSpec(
+        name="RetrievalPlan",
+        target_type=RetrievalPlan,
+        required_fields=("question", "required_facts", "routes", "stop_conditions"),
+        from_mapping=_from_retrieval_plan,
+        to_mapping=_retrieval_plan_to_mapping,
+    ),
+    "QueryRewriteResult": SchemaSpec(
+        name="QueryRewriteResult",
+        target_type=QueryRewriteResult,
+        required_fields=("subqueries",),
+        from_mapping=_from_query_rewrite_result,
+        to_mapping=_query_rewrite_result_to_mapping,
+    ),
+    "ContextAssessment": SchemaSpec(
+        name="ContextAssessment",
+        target_type=ContextAssessment,
+        required_fields=(
+            "status",
+            "sufficiency_score",
+            "covered_facts",
+            "missing_facts",
+            "unsupported_claims",
+            "feedback_queries",
+            "reason",
+        ),
+        from_mapping=_from_context_assessment,
+        to_mapping=_context_assessment_to_mapping,
+    ),
+    "GroundedAnswer": SchemaSpec(
+        name="GroundedAnswer",
+        target_type=GroundedAnswer,
+        required_fields=("answer", "citations", "status", "missing_facts", "sufficiency_score"),
+        from_mapping=_from_grounded_answer,
+        to_mapping=_grounded_answer_to_mapping,
+    ),
+}

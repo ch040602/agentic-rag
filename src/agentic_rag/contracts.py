@@ -79,6 +79,11 @@ class Subquery:
 
 
 @dataclass(frozen=True)
+class QueryRewriteResult:
+    subqueries: Sequence[Subquery] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
 class Snippet:
     id: str
     corpus_id: str
