@@ -1,0 +1,229 @@
+# Agentic RAG Skill
+
+Agentic RAG is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations.
+
+The repository focuses on the product gap between ordinary "retrieve once, answer once" RAG and a more dependable loop:
+
+```text
+plan -> route -> rewrite -> retrieve -> draft -> judge sufficiency -> iterate -> synthesize
+```
+
+It is intended for enterprise document search, internal knowledge assistants, RAG application developers, and researchers who need auditable evidence coverage rather than confident answers from incomplete context.
+
+## What This Skill Provides
+
+- A Codex `SKILL.md` with activation rules and implementation guidance for Agentic RAG workflows.
+- Stable Python contracts for corpus catalogs, retrieval plans, subqueries, snippets, claim citations, context assessments, feedback queries, and grounded answers.
+- A portable orchestrator that runs iterative retrieval and refuses to mark unsupported answers as grounded.
+- Deterministic in-memory adapters for tests, demos, and provider-adapter contract checks.
+- Reference prompts and JSON schemas for planner, query rewriter, sufficiency judge, and synthesizer components.
+- Tests covering iterative retrieval, missing evidence feedback, unsupported claim detection, citation completeness, and route-aware retrieval.
+
+## Repository Layout
+
+```text
+.
++-- SKILL.md
++-- README.md
++-- agents/
+|   +-- openai.yaml
++-- references/
+|   +-- agentic-rag-behavior.md
+|   +-- agentic-rag-behavior-summary.md
+|   +-- codex-completion-brief.md
+|   +-- prompts-and-schemas.md
+|   +-- source-map.md
++-- src/
+|   +-- agentic_rag/
+|       +-- contracts.py
+|       +-- orchestrator.py
+|       +-- adapters/
+|           +-- in_memory.py
++-- tests/
+    +-- test_orchestrator.py
+```
+
+## How It Works
+
+The scaffold separates orchestration from provider-specific implementation:
+
+1. A `Planner` decomposes the original question into required facts and routes each fact to candidate corpora.
+2. A `QueryRewriter` creates targeted subqueries for each routed fact.
+3. A `Retriever` returns snippets with provenance.
+4. A `Drafter` creates an intermediate answer only from retrieved snippets.
+5. A `SufficientContextJudge` checks required-fact coverage, unsupported draft claims, and missing facts.
+6. If context is insufficient and the iteration budget remains, the next iteration uses judge feedback queries.
+7. A `Synthesizer` emits a grounded answer with claim-level citations, or returns partial/unanswerable diagnostics.
+
+The orchestrator preserves:
+
+- Original question
+- Plan items
+- Rewritten subqueries
+- Retrieved snippets
+- Sufficiency assessments
+- Missing fact feedback queries
+- Final grounded citations
+
+## Core Contracts
+
+Important contracts live in `src/agentic_rag/contracts.py`:
+
+- `Corpus`: corpus id, description, and metadata used for routing.
+- `RequiredFact`: a fact that must, should, or may be answered.
+- `RetrievalPlan`: required facts, routes, and stop conditions.
+- `Subquery`: rewritten query with target corpus ids and lineage fields.
+- `Snippet`: retrieved evidence with corpus id, document id, score, metadata, and optional span.
+- `ContextAssessment`: sufficiency status, `sufficiency_score`, covered facts, missing facts, unsupported claims, and feedback queries.
+- `GroundedAnswer`: answer text, claim-level citations, status, missing facts, and final sufficiency score.
+- `IterationTrace`: subqueries, snippets, draft, and assessment for each loop iteration.
+
+## Quick Start
+
+This scaffold has no runtime dependencies beyond Python 3.11+.
+
+Run the tests:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+When running ad-hoc scripts from a source checkout, set `PYTHONPATH=src` or install the package through your own project tooling before importing `agentic_rag`.
+
+Use the deterministic in-memory components:
+
+```python
+from agentic_rag.adapters.in_memory import (
+    EvidenceCoverageJudge,
+    FeedbackAwareQueryRewriter,
+    InMemoryDocument,
+    InMemoryRetriever,
+    RuleBasedSynthesizer,
+    ScriptedPlanner,
+    SnippetDrafter,
+)
+from agentic_rag.contracts import Corpus, RequiredFact, RetrievalPlan, Route
+from agentic_rag.orchestrator import AgenticRAGOrchestrator, OrchestratorConfig
+
+plan = RetrievalPlan(
+    question="Who owns Alice's project?",
+    required_facts=(
+        RequiredFact(
+            id="person_project",
+            description="Alice's project name",
+            metadata={"required_terms": ("alice", "project zen")},
+        ),
+        RequiredFact(
+            id="project_owner",
+            description="Project Zen owner",
+            metadata={"required_terms": ("project zen", "owner", "nina")},
+        ),
+    ),
+    routes=(
+        Route("person_project", ("directory",), "People records contain assignments."),
+        Route("project_owner", ("projects",), "Project records contain owners."),
+    ),
+)
+
+retriever = InMemoryRetriever(
+    (
+        InMemoryDocument("directory", "people-1", "Alice works on Project Zen."),
+        InMemoryDocument("projects", "project-1", "Project Zen owner is Nina."),
+    )
+)
+
+orchestrator = AgenticRAGOrchestrator(
+    planner=ScriptedPlanner(plan),
+    rewriter=FeedbackAwareQueryRewriter(initial_fact_ids=("person_project",)),
+    retriever=retriever,
+    drafter=SnippetDrafter(),
+    judge=EvidenceCoverageJudge(),
+    synthesizer=RuleBasedSynthesizer(),
+    config=OrchestratorConfig(max_iterations=2),
+)
+
+result = orchestrator.run(
+    "Who owns Alice's project?",
+    (
+        Corpus("directory", "Employee directory and project assignments."),
+        Corpus("projects", "Project ownership records."),
+    ),
+)
+
+print(result.answer.status)
+print(result.answer.sufficiency_score)
+print(result.answer.citations)
+```
+
+## Expected Output Shape
+
+Final answers should be grounded by snippet ids:
+
+```python
+GroundedAnswer(
+    answer="project_owner: [projects:project-1:q1-0]",
+    citations=(
+        GroundedCitation(
+            claim="project_owner",
+            snippet_ids=("projects:project-1:q1-0",),
+        ),
+    ),
+    status=AnswerStatus.ANSWERED,
+    missing_facts=(),
+    sufficiency_score=1.0,
+)
+```
+
+When evidence is missing, the assessment returns targeted follow-up queries:
+
+```python
+ContextAssessment(
+    status=ContextStatus.INSUFFICIENT,
+    sufficiency_score=0.5,
+    missing_facts=("Project Zen owner",),
+    feedback_queries=(
+        FeedbackQuery(
+            query="Project Zen owner",
+            target_corpus_ids=("projects",),
+            reason="Evidence for required fact 'project_owner' was not found.",
+        ),
+    ),
+)
+```
+
+## Implementation Rules
+
+- Keep provider integrations behind adapters.
+- Preserve corpus descriptions and use them as routing metadata.
+- Preserve query lineage from original question to final citation.
+- Treat sufficiency as a fact-coverage decision, not a vector-score threshold.
+- Never return a fully answered result after an insufficient sufficiency check.
+- Enforce iteration and cost limits in the orchestrator or adapter layer.
+
+## Current Status
+
+Implemented:
+
+- Portable contracts
+- Iterative orchestrator
+- Deterministic in-memory adapters
+- Claim-level citation output
+- Sufficiency scoring
+- Missing-fact feedback queries
+- Unit tests for core loop behavior
+
+Planned follow-up work:
+
+- Provider adapters for production retrievers and LLM structured outputs
+- JSON schema validation and repair for malformed model outputs
+- Native Google Cross Corpus Retrieval adapter
+- Evaluation fixtures for multi-hop and cross-corpus benchmarks
+- Conflict-aware synthesis tests
+
+## Sources
+
+This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. See `references/source-map.md` for source URLs and preserved public facts.
+
+## License
+
+MIT. See `LICENSE`.

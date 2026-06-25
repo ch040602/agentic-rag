@@ -1,0 +1,223 @@
+"""Stable contracts for the portable Agentic RAG loop."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Mapping, Protocol, Sequence
+
+
+class FactPriority(str, Enum):
+    MUST = "must"
+    SHOULD = "should"
+    NICE = "nice"
+
+
+class ContextStatus(str, Enum):
+    SUFFICIENT = "sufficient"
+    INSUFFICIENT = "insufficient"
+    IRRELEVANT = "irrelevant"
+    UNANSWERABLE = "unanswerable"
+
+
+class AnswerStatus(str, Enum):
+    ANSWERED = "answered"
+    PARTIAL = "partial"
+    UNANSWERABLE = "unanswerable"
+
+
+@dataclass(frozen=True)
+class Corpus:
+    id: str
+    description: str
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class RequiredFact:
+    id: str
+    description: str
+    priority: FactPriority | str = FactPriority.MUST
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def is_must(self) -> bool:
+        priority = self.priority.value if isinstance(self.priority, FactPriority) else str(self.priority)
+        return priority == FactPriority.MUST.value
+
+
+@dataclass(frozen=True)
+class Route:
+    fact_id: str
+    candidate_corpus_ids: Sequence[str]
+    reason: str
+
+
+@dataclass(frozen=True)
+class RetrievalPlan:
+    question: str
+    required_facts: Sequence[RequiredFact]
+    routes: Sequence[Route]
+    stop_conditions: Sequence[str] = field(default_factory=tuple)
+
+    def route_for_fact(self, fact_id: str) -> Route | None:
+        for route in self.routes:
+            if route.fact_id == fact_id:
+                return route
+        return None
+
+
+@dataclass(frozen=True)
+class Subquery:
+    id: str
+    fact_id: str
+    query: str
+    target_corpus_ids: Sequence[str]
+    reason: str
+    parent_query: str | None = None
+    iteration: int = 0
+
+
+@dataclass(frozen=True)
+class Snippet:
+    id: str
+    corpus_id: str
+    document_id: str
+    text: str
+    score: float = 0.0
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    span: tuple[int, int] | None = None
+    query_id: str | None = None
+    fact_id: str | None = None
+
+
+@dataclass(frozen=True)
+class Claim:
+    text: str
+    snippet_ids: Sequence[str] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class DraftAnswer:
+    claims: Sequence[Claim] = field(default_factory=tuple)
+    text: str = ""
+
+
+@dataclass(frozen=True)
+class CoveredFact:
+    fact_id: str
+    snippet_ids: Sequence[str]
+
+
+@dataclass(frozen=True)
+class FeedbackQuery:
+    query: str
+    target_corpus_ids: Sequence[str]
+    reason: str
+    fact_id: str | None = None
+
+
+@dataclass(frozen=True)
+class ContextAssessment:
+    status: ContextStatus | str
+    sufficiency_score: float
+    covered_facts: Sequence[CoveredFact] = field(default_factory=tuple)
+    missing_facts: Sequence[str] = field(default_factory=tuple)
+    unsupported_claims: Sequence[str] = field(default_factory=tuple)
+    feedback_queries: Sequence[FeedbackQuery] = field(default_factory=tuple)
+    reason: str = ""
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.sufficiency_score <= 1:
+            raise ValueError("sufficiency_score must be between 0 and 1")
+
+    @property
+    def confidence(self) -> float:
+        """Compatibility alias for schemas that name this score confidence."""
+        return self.sufficiency_score
+
+
+@dataclass(frozen=True)
+class GroundedCitation:
+    claim: str
+    snippet_ids: Sequence[str]
+
+
+@dataclass(frozen=True)
+class GroundedAnswer:
+    answer: str
+    citations: Sequence[GroundedCitation]
+    status: AnswerStatus | str
+    missing_facts: Sequence[str] = field(default_factory=tuple)
+    sufficiency_score: float = 0.0
+
+
+@dataclass(frozen=True)
+class IterationTrace:
+    iteration: int
+    subqueries: Sequence[Subquery]
+    snippets: Sequence[Snippet]
+    draft: DraftAnswer
+    assessment: ContextAssessment
+
+
+@dataclass(frozen=True)
+class RunResult:
+    question: str
+    plan: RetrievalPlan
+    answer: GroundedAnswer
+    iterations: Sequence[IterationTrace]
+    snippets: Sequence[Snippet]
+
+
+class Planner(Protocol):
+    def plan(
+        self,
+        question: str,
+        corpus_catalog: Sequence[Corpus],
+        prior_assessment: ContextAssessment | None = None,
+    ) -> RetrievalPlan:
+        ...
+
+
+class QueryRewriter(Protocol):
+    def rewrite(
+        self,
+        question: str,
+        plan: RetrievalPlan,
+        prior_assessment: ContextAssessment | None,
+        iteration: int,
+    ) -> Sequence[Subquery]:
+        ...
+
+
+class Retriever(Protocol):
+    def retrieve(self, subquery: Subquery) -> Sequence[Snippet]:
+        ...
+
+
+class Drafter(Protocol):
+    def draft(self, question: str, plan: RetrievalPlan, snippets: Sequence[Snippet]) -> DraftAnswer:
+        ...
+
+
+class SufficientContextJudge(Protocol):
+    def assess(
+        self,
+        question: str,
+        plan: RetrievalPlan,
+        snippets: Sequence[Snippet],
+        draft: DraftAnswer,
+    ) -> ContextAssessment:
+        ...
+
+
+class Synthesizer(Protocol):
+    def synthesize(
+        self,
+        question: str,
+        plan: RetrievalPlan,
+        snippets: Sequence[Snippet],
+        assessment: ContextAssessment,
+    ) -> GroundedAnswer:
+        ...
