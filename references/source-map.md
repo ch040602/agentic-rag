@@ -11,6 +11,7 @@ The current scaffold implements the portable subset of the public Agentic RAG pa
 - Subqueries preserve fact and iteration lineage.
 - Snippets preserve corpus id, document id, score, metadata, and query lineage.
 - Sufficiency assessment returns status, `sufficiency_score`, covered facts, missing facts, unsupported claims, and feedback queries.
+- The deterministic sufficiency judge classifies sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts for offline tests and adapter baselines.
 - The orchestrator stops on sufficient, irrelevant, unanswerable, max iteration, or no-subquery states.
 - Final answers are downgraded when sufficiency fails or citations reference snippets that were not retrieved.
 
@@ -39,7 +40,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 | `RDD-T-00000008` | `RDD-T-00000017` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving lexical retriever adapter with corpus, document, query, score, metadata, span, and fact lineage. Completed in `src/agentic_rag/adapters/retriever.py`. |
 | `RDD-T-00000008` | `RDD-T-00000018` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Deterministic scoring, ordering, span extraction, and duplicate-document behavior. Completed in `src/agentic_rag/adapters/retriever.py` and `tests/test_retriever_adapter.py`. |
 | `RDD-T-00000009` | `RDD-T-00000019` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Answerability labels for sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts. Completed in `src/agentic_rag/contracts.py`. |
-| `RDD-T-00000009` | `RDD-T-00000020` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency judge with missing facts, unsupported claims, covered facts, and feedback queries. |
+| `RDD-T-00000009` | `RDD-T-00000020` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency judge with missing facts, unsupported claims, covered facts, and feedback queries. Completed in `src/agentic_rag/sufficiency.py`. |
 | `RDD-T-00000009` | `RDD-T-00000021` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Selective generation abstention policy that maps answerability to answered, partial, or unanswerable results. |
 | `RDD-T-00000010` | `RDD-T-00000022` | Fact, Fetch, and Reason / FRAMES | Fixture format and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count. |
 | `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. |
@@ -119,7 +120,7 @@ Key public facts to preserve:
 
 Implementation relevance:
 
-- Directly motivates `ContextAssessment`, `sufficiency_score`, `missing_facts`, `unsupported_claims`, and partial/unanswerable answers.
+- Directly motivates `ContextAssessment`, `sufficiency_score`, `missing_facts`, `unsupported_claims`, answerability labels, targeted feedback queries, and partial/unanswerable answers.
 - Supports the guardrail that a final answer should not be marked answered when context is insufficient.
 - Tracked by `RDD-T-00000009`.
 

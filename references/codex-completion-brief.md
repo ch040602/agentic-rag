@@ -6,6 +6,7 @@
 src/agentic_rag/
 +-- contracts.py       # Stable dataclasses and Protocols
 +-- orchestrator.py    # Agentic loop
++-- sufficiency.py     # Deterministic sufficient-context autorater
 +-- adapters/
 |   +-- llm.py         # TODO-CODEX: provider client + structured output
 |   +-- retriever.py   # TODO-CODEX: vector/BM25/SQL retriever adapters
@@ -57,9 +58,10 @@ src/agentic_rag/
    - It must return missing facts and feedback queries when insufficient.
    - Add answerability categories and selective abstention behavior inspired by the Sufficient Context paper.
    - Current contracts include `AnswerabilityLabel` while preserving the existing `ContextAssessment.status` API.
+   - Current sufficiency utilities include `AutoraterStyleSufficiencyJudge` for deterministic required-fact coverage, missing facts, unsupported claims, feedback queries, conflict detection, and unanswerable classification.
    - Implement in order:
      - `RDD-T-00000019`: Sufficient Context answerability categories. Completed.
-     - `RDD-T-00000020`: Autorater-style sufficiency judge.
+     - `RDD-T-00000020`: Autorater-style sufficiency judge. Completed.
      - `RDD-T-00000021`: Selective generation abstention policy.
 
 7. **Evaluation** (`RDD-T-00000010`)

@@ -15,6 +15,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 - A Codex `SKILL.md` with activation rules and implementation guidance for Agentic RAG workflows.
 - Stable Python contracts for corpus catalogs, retrieval plans, subqueries, snippets, claim citations, context assessments, feedback queries, and grounded answers.
 - A portable orchestrator that runs iterative retrieval and refuses to mark unsupported answers as grounded.
+- A deterministic autorater-style sufficient-context judge for offline tests and adapter baselines.
 - Deterministic in-memory adapters for tests, demos, and provider-adapter contract checks.
 - Reference prompts and JSON schemas for planner, query rewriter, sufficiency judge, and synthesizer components.
 - Tests covering iterative retrieval, missing evidence feedback, unsupported claim detection, citation completeness, and route-aware retrieval.
@@ -39,6 +40,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 |   +-- agentic_rag/
 |       +-- contracts.py
 |       +-- orchestrator.py
+|       +-- sufficiency.py
 |       +-- adapters/
 |           +-- llm.py
 |           +-- retriever.py
@@ -84,6 +86,8 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 - `AnswerabilityLabel`: Sufficient Context answerability labels for sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
 - `GroundedAnswer`: answer text, claim-level citations, status, missing facts, and final sufficiency score.
 - `IterationTrace`: subqueries, snippets, draft, and assessment for each loop iteration.
+
+`src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, and assigns Sufficient Context answerability labels. It uses `RequiredFact.metadata["required_terms"]` for reproducible fact matching and optional `conflict_terms` for incompatible evidence checks.
 
 ## Quick Start
 
@@ -233,6 +237,7 @@ Implemented:
 - Provenance-preserving lexical retriever adapter with routed corpus filtering and snippet spans
 - Deterministic lexical retrieval scoring, ordering, and duplicate-document handling
 - Sufficient Context answerability labels that preserve the existing context status API
+- Autorater-style sufficiency judge with answerability classification, missing-fact feedback, unsupported-claim checks, and conflict/unanswerable detection
 - Unit tests for core loop behavior, structured-output conversion, and lexical retrieval
 
 Improvement TODOs completed in this pass:
@@ -250,6 +255,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000017`: Provenance-preserving lexical retriever adapter.
 - `RDD-T-00000018`: Retrieval scoring and deduplication tests.
 - `RDD-T-00000019`: Sufficient Context answerability categories.
+- `RDD-T-00000020`: Autorater-style sufficiency judge.
 
 ## Paper Implementation Roadmap
 
@@ -264,7 +270,7 @@ The next implementation backlog is tracked in `.codex/review-driven-development/
    - `RDD-T-00000018`: Add deterministic retrieval scoring, span extraction, and deduplication tests. Completed.
 3. `RDD-T-00000009`: Implement Sufficient Context autorater and abstention policy. This follows the Sufficient Context paper by distinguishing answerable, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
    - `RDD-T-00000019`: Add answerability categories while preserving the existing context status API. Completed.
-   - `RDD-T-00000020`: Implement an autorater-style sufficiency judge that returns missing facts, unsupported claims, covered facts, and feedback queries.
+   - `RDD-T-00000020`: Implement an autorater-style sufficiency judge that returns missing facts, unsupported claims, covered facts, and feedback queries. Completed.
    - `RDD-T-00000021`: Add selective generation abstention policy so insufficient contexts cannot produce fully answered results.
 4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
    - `RDD-T-00000022`: Add FRAMES-style fixture format and metrics for facts, retrieval, reasoning, citations, and iterations.
