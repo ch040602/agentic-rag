@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Agentic RAG is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations.
+Agentic RAG is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations. This repository implements the public Google Agentic RAG pattern with Codex; it is not a Google product and does not reproduce Google's internal implementation.
 
 The repository focuses on the product gap between ordinary "retrieve once, answer once" RAG and a more dependable loop:
 
@@ -23,6 +23,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 - [Implementation Rules](#implementation-rules)
 - [Install and Use](#install-and-use)
 - [Validate and Publish](#validate-and-publish)
+- [Citation](#citation)
 - [Referenced Papers](#referenced-papers)
 - [Sources](#sources)
 
@@ -223,6 +224,18 @@ python -m unittest discover -s tests -v
 
 The GitHub Actions workflow runs the same validation and unit tests on pushes and pull requests to `main`.
 
+## Citation
+
+This implementation is based on the public Agentic RAG behavior described by Google Research and Google Cloud:
+
+- Google Research. **Unlocking dependable responses with Gemini Enterprise Agent Platform's Agentic RAG**. Published June 5, 2026.  
+  https://research.google/blog/unlocking-dependable-responses-with-gemini-enterprise-agent-platforms-agentic-rag/
+
+- Google Cloud. **RAG Engine Cross Corpus Retrieval**. Gemini Enterprise Agent Platform documentation.  
+  https://docs.cloud.google.com/gemini-enterprise-agent-platform/build/rag-engine/cross-corpus-retrieval
+
+The code and skill packaging in this repository were implemented with Codex as a portable, open-source scaffold for the public pattern above.
+
 ## Referenced Papers
 
 The design is grounded in the following papers and public research artifacts:
@@ -244,7 +257,7 @@ The design is grounded in the following papers and public research artifacts:
 
 ## Sources
 
-This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. The Google Research Agentic RAG announcement connects the system to Sufficient Context and FramesQA/FRAMES evaluation, and the Google Cloud documentation describes the Cross Corpus Retrieval product surface. See `references/source-map.md` for source URLs, referenced papers, and implementation alignment notes.
+This project summarizes public Agentic RAG behavior from Google Research and Google Cloud documentation. The Google Research Agentic RAG announcement connects the system to Sufficient Context and FramesQA/FRAMES evaluation, and the Google Cloud documentation describes the Cross Corpus Retrieval product surface. The implementation was produced with Codex as a portable scaffold for those public behaviors. See `references/source-map.md` for source URLs, referenced papers, and implementation alignment notes.
 
 ## License
 
