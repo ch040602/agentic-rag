@@ -23,8 +23,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
 - [Quick Start](#quick-start)
 - [Expected Output Shape](#expected-output-shape)
 - [Implementation Rules](#implementation-rules)
-- [Current Status](#current-status)
-- [Paper Implementation Roadmap](#paper-implementation-roadmap)
+- [Skill Packaging](#skill-packaging)
 - [Referenced Papers](#referenced-papers)
 - [Sources](#sources)
 
@@ -71,6 +70,7 @@ It is intended for enterprise document search, internal knowledge assistants, RA
     +-- test_evaluation.py
     +-- test_orchestrator.py
     +-- test_retriever_adapter.py
+    +-- test_sufficiency.py
 ```
 
 ## How It Works
@@ -256,82 +256,17 @@ GroundedAnswer(
 - Never return a fully answered result after an insufficient sufficiency check.
 - Enforce iteration and cost limits in the orchestrator or adapter layer.
 
-## Current Status
+## Skill Packaging
 
-Implemented:
+This repository is packaged as an Agent Skill:
 
-- Portable contracts
-- Iterative orchestrator
-- Deterministic in-memory adapters
-- Claim-level citation output
-- Sufficiency scoring
-- Missing-fact feedback queries
-- Editable package installation through `pyproject.toml`
-- GitHub Actions test CI
-- Explicit stop behavior when the rewriter produces no subqueries
-- Citation guard that rejects snippet ids not present in retrieved evidence
-- Structured-output schema registry and dataclass conversion helpers for LLM adapters
-- Structured JSON parsing with explicit validation errors for malformed JSON, enum mismatches, field type mismatches, and missing fields
-- One-shot structured output repair protocol with injected repair callable and strict revalidation
-- Provenance-preserving lexical retriever adapter with routed corpus filtering and snippet spans
-- Deterministic lexical retrieval scoring, ordering, and duplicate-document handling
-- Sufficient Context answerability labels that preserve the existing context status API
-- Autorater-style sufficiency judge with answerability classification, missing-fact feedback, unsupported-claim checks, and conflict/unanswerable detection
-- Selective generation abstention policy that prevents insufficient context from producing a fully answered result
-- FRAMES-style evaluation fixture, metrics, and run comparison for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count
-- Conflict evidence contracts that preserve incompatible snippet groups through assessment, structured-output conversion, and final answers
-- Conflict-aware judge and synthesis behavior that returns partial answers with citations for both incompatible evidence groups
-- Unit tests for core loop behavior, structured-output conversion, lexical retrieval, sufficiency judging, abstention, and evaluation metrics
+- `SKILL.md` is the skill entrypoint with YAML frontmatter, activation guidance, workflow steps, implementation rules, and anti-patterns.
+- `agents/openai.yaml` provides Codex-facing display metadata and allows implicit invocation.
+- `references/` contains progressively loaded background material, prompt contracts, source mapping, and completion guidance.
+- `src/agentic_rag/` is an optional Python scaffold that agents can reuse when a task needs executable contracts or tests.
+- `tests/` verifies the scaffold behavior without network access or provider credentials.
 
-Improvement TODOs completed in this pass:
-
-- `RDD-T-00000002`: Packaging metadata for editable installs.
-- `RDD-T-00000003`: GitHub Actions test CI.
-- `RDD-T-00000004`: Empty-subquery stop behavior.
-- `RDD-T-00000005`: Citation provenance guard.
-- `RDD-T-00000006`: README and source-map roadmap alignment.
-- `RDD-T-00000013`: Paper implementation TODO roadmap.
-- `RDD-T-00000029`: Decomposed paper implementation TODO documentation.
-- `RDD-T-00000014`: Structured-output schema registry and dataclass conversion helpers.
-- `RDD-T-00000015`: Structured JSON parser and validation errors.
-- `RDD-T-00000016`: One-shot structured output repair protocol contract.
-- `RDD-T-00000017`: Provenance-preserving lexical retriever adapter.
-- `RDD-T-00000018`: Retrieval scoring and deduplication tests.
-- `RDD-T-00000019`: Sufficient Context answerability categories.
-- `RDD-T-00000020`: Autorater-style sufficiency judge.
-- `RDD-T-00000021`: Selective generation abstention policy.
-- `RDD-T-00000022`: FRAMES-style fixture format and metrics.
-- `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
-- `RDD-T-00000024`: Conflict evidence contracts.
-- `RDD-T-00000025`: Conflict-aware judge and synthesis behavior.
-
-## Paper Implementation Roadmap
-
-The next implementation backlog is tracked in `.codex/review-driven-development/todos.jsonl` and ordered to follow the referenced papers and public Agentic RAG write-up. Parent TODOs define the paper-aligned milestones; child TODOs define the implementation sequence.
-
-1. `RDD-T-00000007`: Add structured-output LLM adapter contracts and JSON repair. Completed. This maps the planner, query rewriter, sufficiency judge, and synthesizer prompts into validated machine-readable outputs.
-   - `RDD-T-00000014`: Define schema registry and dataclass conversion helpers for `RetrievalPlan`, `QueryRewriteResult`, `ContextAssessment`, and `GroundedAnswer`.
-   - `RDD-T-00000015`: Add structured JSON parser and validation errors for malformed JSON, wrong enum values, wrong field types, and missing fields. Completed.
-   - `RDD-T-00000016`: Add one-shot JSON repair protocol contract with an injected repair callable and tests for success and failure. Completed.
-2. `RDD-T-00000008`: Add retriever adapter baseline with provenance-preserving lexical retrieval. Completed. This follows the original RAG paper's emphasis on retrieved non-parametric memory and provenance.
-   - `RDD-T-00000017`: Add provenance-preserving lexical retriever adapter outside the orchestrator. Completed.
-   - `RDD-T-00000018`: Add deterministic retrieval scoring, span extraction, and deduplication tests. Completed.
-3. `RDD-T-00000009`: Implement Sufficient Context autorater and abstention policy. Completed. This follows the Sufficient Context paper by distinguishing answerable, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
-   - `RDD-T-00000019`: Add answerability categories while preserving the existing context status API. Completed.
-   - `RDD-T-00000020`: Implement an autorater-style sufficiency judge that returns missing facts, unsupported claims, covered facts, and feedback queries. Completed.
-   - `RDD-T-00000021`: Add selective generation abstention policy so insufficient contexts cannot produce fully answered results. Completed.
-4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. Completed. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
-   - `RDD-T-00000022`: Add FRAMES-style fixture format and metrics for facts, retrieval, reasoning, citations, and iterations. Completed.
-   - `RDD-T-00000023`: Add iterative-vs-single-shot evaluation tests using a tiny multi-hop fixture. Completed.
-5. `RDD-T-00000011`: Add conflict-aware grounded synthesis. Completed. This ensures conflicting snippets are cited and surfaced instead of silently merged.
-   - `RDD-T-00000024`: Add conflict evidence contracts that can cite both incompatible snippet groups. Completed.
-   - `RDD-T-00000025`: Implement conflict-aware judge and synthesis behavior for contradictory evidence. Completed.
-6. `RDD-T-00000012`: Add Google Cross Corpus Retrieval adapter scaffold. This keeps native Google mode outside the orchestrator while preserving portable mode as the default.
-   - `RDD-T-00000026`: Add Google native mode configuration validation for project, location, corpus resources, and service-account assumptions.
-   - `RDD-T-00000027`: Add a Google Cross Corpus request adapter seam with injected client/callable tests and no network dependency.
-   - `RDD-T-00000028`: Document portable mode versus Google native mode, including default no-SDK import behavior.
-
-Planned follow-up work should be implemented through those RDD TODOs rather than as ad-hoc changes.
+The skill can be used directly from this folder by clients that scan skill directories, or its Python scaffold can be installed in editable mode for local development.
 
 ## Referenced Papers
 
