@@ -32,28 +32,36 @@ src/agentic_rag/
    - Return partial answer if insufficient after budget.
    - Current scaffold enforces this portable loop in `src/agentic_rag/orchestrator.py`.
 
-4. **LLM structured outputs**
+4. **LLM structured outputs** (`RDD-T-00000007`)
    - Convert prompts in `prompts-and-schemas.md` to provider-specific schemas.
    - Validate outputs before using them.
    - Retry malformed JSON once with a repair instruction.
 
-5. **Retriever adapters**
+5. **Retriever adapters** (`RDD-T-00000008`)
    - Add at least one real adapter.
    - Preserve snippet provenance.
    - Include corpus id and document id for every hit.
 
-6. **Sufficient Context Judge**
+6. **Sufficient Context Judge** (`RDD-T-00000009`)
    - It must inspect original question, plan, snippets, and draft.
    - It must return missing facts and feedback queries when insufficient.
+   - Add answerability categories and selective abstention behavior inspired by the Sufficient Context paper.
 
-7. **Native Google mode**
-   - If using Gemini Enterprise Agent Platform RAG Engine, add an adapter that calls Cross-Corpus Retrieval APIs.
-   - Respect location, IAM, project, and corpus-resource requirements.
-
-8. **Evaluation**
+7. **Evaluation** (`RDD-T-00000010`)
    - Add a tiny multi-hop fixture with at least two corpora and one distractor corpus.
    - Verify that routing does not search all corpora unless justified.
    - Verify that one missing fact triggers a targeted follow-up query.
+   - Report fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
+
+8. **Conflict-aware synthesis** (`RDD-T-00000011`)
+   - Surface contradictory snippets instead of silently merging them.
+   - Cite both sides of a conflict.
+   - Return partial or conflict-aware status when a required fact has incompatible evidence.
+
+9. **Native Google mode** (`RDD-T-00000012`)
+   - If using Gemini Enterprise Agent Platform RAG Engine, add an adapter that calls Cross-Corpus Retrieval APIs.
+   - Respect location, IAM, project, and corpus-resource requirements.
+   - Keep Google-specific dependencies out of module import time.
 
 ## Acceptance tests to add
 

@@ -14,6 +14,19 @@ The current scaffold implements the portable subset of the public Agentic RAG pa
 - The orchestrator stops on sufficient, irrelevant, unanswerable, max iteration, or no-subquery states.
 - Final answers are downgraded when sufficiency fails or citations reference snippets that were not retrieved.
 
+## Registered implementation TODOs
+
+These TODOs map the referenced papers and public product docs to concrete implementation work:
+
+| TODO | Source basis | Implementation target |
+|---|---|---|
+| `RDD-T-00000007` | Google Agentic RAG roles and structured prompt schemas | Structured-output LLM adapter contracts, schema validation, and one repair attempt for malformed JSON. |
+| `RDD-T-00000008` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving retriever adapter baseline for non-parametric retrieved memory. |
+| `RDD-T-00000009` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency classification and selective abstention policy. |
+| `RDD-T-00000010` | Fact, Fetch, and Reason / FRAMES | Multi-hop evaluation harness with fact, fetch, reasoning, citation, and iteration metrics. |
+| `RDD-T-00000011` | Agentic RAG grounded synthesis requirements | Conflict-aware synthesis that cites incompatible evidence instead of merging it silently. |
+| `RDD-T-00000012` | Google Cloud Cross Corpus Retrieval docs | Native Google adapter scaffold with region, IAM, and corpus-resource validation. |
+
 ## Google Research announcement
 
 URL: https://research.google/blog/unlocking-dependable-responses-with-gemini-enterprise-agent-platforms-agentic-rag/
@@ -32,6 +45,7 @@ Implementation relevance:
 - Motivates the multi-agent loop: orchestrator, planner, query rewriter, search fanout, sufficient context agent, and synthesizer.
 - Motivates missing-fact feedback and iterative follow-up retrieval.
 - Connects Agentic RAG evaluation to FramesQA/FRAMES and cross-corpus routing.
+- Tracked by `RDD-T-00000007`, `RDD-T-00000009`, `RDD-T-00000010`, `RDD-T-00000011`, and `RDD-T-00000012`.
 
 ## Google Cloud Cross Corpus Retrieval docs
 
@@ -52,6 +66,7 @@ Implementation relevance:
 - Motivates provider adapters rather than embedding product-specific calls in the orchestrator.
 - Motivates high-quality corpus descriptions for cross-corpus routing.
 - Remains planned follow-up work for native Google mode.
+- Tracked by `RDD-T-00000012`.
 
 ## Referenced papers
 
@@ -68,6 +83,7 @@ Implementation relevance:
 
 - Provides the baseline terminology for RAG and retrieved evidence.
 - Motivates explicit provenance and updateable external knowledge.
+- Tracked by `RDD-T-00000008`.
 
 ### Sufficient Context: A New Lens on Retrieval Augmented Generation Systems
 
@@ -83,6 +99,7 @@ Implementation relevance:
 
 - Directly motivates `ContextAssessment`, `sufficiency_score`, `missing_facts`, `unsupported_claims`, and partial/unanswerable answers.
 - Supports the guardrail that a final answer should not be marked answered when context is insufficient.
+- Tracked by `RDD-T-00000009`.
 
 ### Fact, Fetch, and Reason: A Unified Evaluation of Retrieval-Augmented Generation
 
@@ -97,6 +114,7 @@ Implementation relevance:
 
 - Motivates future evaluation fixtures for multi-hop and cross-corpus RAG.
 - Provides the research basis for FramesQA-style tests mentioned in the Google Research Agentic RAG announcement.
+- Tracked by `RDD-T-00000010`.
 
 ## Agent Skills specification
 

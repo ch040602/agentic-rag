@@ -232,13 +232,18 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000005`: Citation provenance guard.
 - `RDD-T-00000006`: README and source-map roadmap alignment.
 
-Planned follow-up work:
+## Paper Implementation Roadmap
 
-- Provider adapters for production retrievers and LLM structured outputs
-- JSON schema validation and repair for malformed model outputs
-- Native Google Cross Corpus Retrieval adapter
-- Evaluation fixtures for multi-hop and cross-corpus benchmarks
-- Conflict-aware synthesis tests
+The next implementation backlog is tracked in `.codex/review-driven-development/todos.jsonl` and ordered to follow the referenced papers and public Agentic RAG write-up:
+
+1. `RDD-T-00000007`: Add structured-output LLM adapter contracts and JSON repair. This maps the planner, query rewriter, sufficiency judge, and synthesizer prompts into validated machine-readable outputs.
+2. `RDD-T-00000008`: Add retriever adapter baseline with provenance-preserving lexical retrieval. This follows the original RAG paper's emphasis on retrieved non-parametric memory and provenance.
+3. `RDD-T-00000009`: Implement Sufficient Context autorater and abstention policy. This follows the Sufficient Context paper by distinguishing answerable, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts.
+4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
+5. `RDD-T-00000011`: Add conflict-aware grounded synthesis. This ensures conflicting snippets are cited and surfaced instead of silently merged.
+6. `RDD-T-00000012`: Add Google Cross Corpus Retrieval adapter scaffold. This keeps native Google mode outside the orchestrator while preserving portable mode as the default.
+
+Planned follow-up work should be implemented through those RDD TODOs rather than as ad-hoc changes.
 
 ## Referenced Papers
 
