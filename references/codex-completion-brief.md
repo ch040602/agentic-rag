@@ -36,32 +36,53 @@ src/agentic_rag/
    - Convert prompts in `prompts-and-schemas.md` to provider-specific schemas.
    - Validate outputs before using them.
    - Retry malformed JSON once with a repair instruction.
+   - Implement in order:
+     - `RDD-T-00000014`: Schema registry and dataclass conversion helpers.
+     - `RDD-T-00000015`: Structured JSON parser and validation errors.
+     - `RDD-T-00000016`: One-shot JSON repair protocol contract.
 
 5. **Retriever adapters** (`RDD-T-00000008`)
    - Add at least one real adapter.
    - Preserve snippet provenance.
    - Include corpus id and document id for every hit.
+   - Implement in order:
+     - `RDD-T-00000017`: Provenance-preserving lexical retriever adapter.
+     - `RDD-T-00000018`: Retrieval scoring and deduplication tests.
 
 6. **Sufficient Context Judge** (`RDD-T-00000009`)
    - It must inspect original question, plan, snippets, and draft.
    - It must return missing facts and feedback queries when insufficient.
    - Add answerability categories and selective abstention behavior inspired by the Sufficient Context paper.
+   - Implement in order:
+     - `RDD-T-00000019`: Sufficient Context answerability categories.
+     - `RDD-T-00000020`: Autorater-style sufficiency judge.
+     - `RDD-T-00000021`: Selective generation abstention policy.
 
 7. **Evaluation** (`RDD-T-00000010`)
    - Add a tiny multi-hop fixture with at least two corpora and one distractor corpus.
    - Verify that routing does not search all corpora unless justified.
    - Verify that one missing fact triggers a targeted follow-up query.
    - Report fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
+   - Implement in order:
+     - `RDD-T-00000022`: FRAMES-style fixture format and metrics.
+     - `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
 
 8. **Conflict-aware synthesis** (`RDD-T-00000011`)
    - Surface contradictory snippets instead of silently merging them.
    - Cite both sides of a conflict.
    - Return partial or conflict-aware status when a required fact has incompatible evidence.
+   - Implement in order:
+     - `RDD-T-00000024`: Conflict evidence contracts.
+     - `RDD-T-00000025`: Conflict-aware judge and synthesis behavior.
 
 9. **Native Google mode** (`RDD-T-00000012`)
    - If using Gemini Enterprise Agent Platform RAG Engine, add an adapter that calls Cross-Corpus Retrieval APIs.
    - Respect location, IAM, project, and corpus-resource requirements.
    - Keep Google-specific dependencies out of module import time.
+   - Implement in order:
+     - `RDD-T-00000026`: Google native mode configuration validation.
+     - `RDD-T-00000027`: Google Cross Corpus request adapter seam.
+     - `RDD-T-00000028`: Portable mode versus Google native mode documentation.
 
 ## Acceptance tests to add
 

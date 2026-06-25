@@ -27,6 +27,28 @@ These TODOs map the referenced papers and public product docs to concrete implem
 | `RDD-T-00000011` | Agentic RAG grounded synthesis requirements | Conflict-aware synthesis that cites incompatible evidence instead of merging it silently. |
 | `RDD-T-00000012` | Google Cloud Cross Corpus Retrieval docs | Native Google adapter scaffold with region, IAM, and corpus-resource validation. |
 
+## Decomposed implementation TODOs
+
+These child TODOs preserve the parent roadmap while making each paper-aligned milestone directly implementable and testable.
+
+| Parent TODO | Child TODO | Source basis | Implementation target |
+|---|---|---|---|
+| `RDD-T-00000007` | `RDD-T-00000014` | Google Agentic RAG roles and structured prompt schemas | Schema registry and dataclass conversion helpers for planner, rewriter, judge, and synthesizer outputs. |
+| `RDD-T-00000007` | `RDD-T-00000015` | Google Agentic RAG structured output requirement | Strict JSON parser and validation errors for malformed or schema-invalid model output. |
+| `RDD-T-00000007` | `RDD-T-00000016` | Production structured-output repair pattern | One-shot repair protocol contract with explicit malformed output, error list, and schema name. |
+| `RDD-T-00000008` | `RDD-T-00000017` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving lexical retriever adapter with corpus, document, query, score, metadata, span, and fact lineage. |
+| `RDD-T-00000008` | `RDD-T-00000018` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Deterministic scoring, ordering, span extraction, and duplicate-document behavior. |
+| `RDD-T-00000009` | `RDD-T-00000019` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Answerability labels for sufficient, useful-but-incomplete, insufficient, conflicting, and unanswerable contexts. |
+| `RDD-T-00000009` | `RDD-T-00000020` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency judge with missing facts, unsupported claims, covered facts, and feedback queries. |
+| `RDD-T-00000009` | `RDD-T-00000021` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Selective generation abstention policy that maps answerability to answered, partial, or unanswerable results. |
+| `RDD-T-00000010` | `RDD-T-00000022` | Fact, Fetch, and Reason / FRAMES | Fixture format and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count. |
+| `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. |
+| `RDD-T-00000011` | `RDD-T-00000024` | Agentic RAG grounded synthesis requirements | Conflict evidence contracts that keep incompatible snippet groups visible and citable. |
+| `RDD-T-00000011` | `RDD-T-00000025` | Agentic RAG grounded synthesis requirements | Conflict-aware judge and synthesis behavior for contradictory evidence. |
+| `RDD-T-00000012` | `RDD-T-00000026` | Google Cloud Cross Corpus Retrieval docs | Native mode configuration validation for project, location, corpus resources, request mode, and service-account assumptions. |
+| `RDD-T-00000012` | `RDD-T-00000027` | Google Cloud Cross Corpus Retrieval docs | Cross Corpus request adapter seam for `AsyncRetrieveContexts`, `AskContexts`, or equivalent payloads with injected clients. |
+| `RDD-T-00000012` | `RDD-T-00000028` | Google Cloud Cross Corpus Retrieval docs | Public documentation for portable default mode, optional native mode, required configuration, and no-SDK default imports. |
+
 ## Google Research announcement
 
 URL: https://research.google/blog/unlocking-dependable-responses-with-gemini-enterprise-agent-platforms-agentic-rag/
