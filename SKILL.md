@@ -21,6 +21,15 @@ metadata:
     - grounded-synthesis
     - codex-skills
     - python
+tags:
+  - agentic-rag
+  - rag
+  - retrieval-augmented-generation
+  - cross-corpus-retrieval
+  - sufficient-context
+  - query-rewriting
+  - grounded-synthesis
+  - python
 ---
 
 # Agentic RAG
