@@ -26,7 +26,7 @@ These TODOs map the referenced papers and public product docs to concrete implem
 | `RDD-T-00000007` | Google Agentic RAG roles and structured prompt schemas | Structured-output LLM adapter contracts, schema validation, and one repair attempt for malformed JSON. Completed. |
 | `RDD-T-00000008` | Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks | Provenance-preserving retriever adapter baseline for non-parametric retrieved memory. Completed. |
 | `RDD-T-00000009` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency classification and selective abstention policy. Completed. |
-| `RDD-T-00000010` | Fact, Fetch, and Reason / FRAMES | Multi-hop evaluation harness with fact, fetch, reasoning, citation, and iteration metrics. |
+| `RDD-T-00000010` | Fact, Fetch, and Reason / FRAMES | Multi-hop evaluation harness with fact, fetch, reasoning, citation, and iteration metrics. Completed. |
 | `RDD-T-00000011` | Agentic RAG grounded synthesis requirements | Conflict-aware synthesis that cites incompatible evidence instead of merging it silently. |
 | `RDD-T-00000012` | Google Cloud Cross Corpus Retrieval docs | Native Google adapter scaffold with region, IAM, and corpus-resource validation. |
 
@@ -45,7 +45,7 @@ These child TODOs preserve the parent roadmap while making each paper-aligned mi
 | `RDD-T-00000009` | `RDD-T-00000020` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Autorater-style sufficiency judge with missing facts, unsupported claims, covered facts, and feedback queries. Completed in `src/agentic_rag/sufficiency.py`. |
 | `RDD-T-00000009` | `RDD-T-00000021` | Sufficient Context: A New Lens on Retrieval Augmented Generation Systems | Selective generation abstention policy that maps answerability to answered, partial, or unanswerable results. Completed in `src/agentic_rag/sufficiency.py` and `src/agentic_rag/orchestrator.py`. |
 | `RDD-T-00000010` | `RDD-T-00000022` | Fact, Fetch, and Reason / FRAMES | Fixture format and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count. Completed in `src/agentic_rag/evaluation.py`. |
-| `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. |
+| `RDD-T-00000010` | `RDD-T-00000023` | Fact, Fetch, and Reason / FRAMES | Iterative-vs-single-shot multi-hop evaluation proving the value of follow-up retrieval. Completed in `tests/test_evaluation.py`. |
 | `RDD-T-00000011` | `RDD-T-00000024` | Agentic RAG grounded synthesis requirements | Conflict evidence contracts that keep incompatible snippet groups visible and citable. |
 | `RDD-T-00000011` | `RDD-T-00000025` | Agentic RAG grounded synthesis requirements | Conflict-aware judge and synthesis behavior for contradictory evidence. |
 | `RDD-T-00000012` | `RDD-T-00000026` | Google Cloud Cross Corpus Retrieval docs | Native mode configuration validation for project, location, corpus resources, request mode, and service-account assumptions. |
@@ -139,6 +139,7 @@ Implementation relevance:
 
 - Motivates evaluation fixtures for multi-hop and cross-corpus RAG.
 - Directly motivates the `EvaluationFixture`, `ExpectedFetch`, `EvaluationMetrics`, and `evaluate_run` helpers in `src/agentic_rag/evaluation.py`.
+- Supports comparing single-shot retrieval with iterative follow-up retrieval through `compare_runs`.
 - Provides the research basis for FramesQA-style tests mentioned in the Google Research Agentic RAG announcement.
 - Tracked by `RDD-T-00000010`.
 

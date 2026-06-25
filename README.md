@@ -92,7 +92,7 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 
 `src/agentic_rag/sufficiency.py` provides `AutoraterStyleSufficiencyJudge`, a deterministic judge that verifies required-fact coverage, reports covered facts and missing facts, detects unsupported draft claims, emits targeted feedback queries, and assigns Sufficient Context answerability labels. It also provides `apply_selective_abstention_policy`, which maps answerability labels to final answered, partial, or unanswerable outputs before citation validation. Fact matching uses `RequiredFact.metadata["required_terms"]`; optional `conflict_terms` mark incompatible evidence.
 
-`src/agentic_rag/evaluation.py` provides FRAMES-style fixture and report dataclasses for multi-hop RAG evaluation. It records bridge facts, expected fetches, expected answer terms, expected citations, and distractor corpora, then reports fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count for a `RunResult`.
+`src/agentic_rag/evaluation.py` provides FRAMES-style fixture and report dataclasses for multi-hop RAG evaluation. It records bridge facts, expected fetches, expected answer terms, expected citations, and distractor corpora, then reports fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count for a `RunResult`. It also compares baseline and candidate runs so single-shot and iterative retrieval strategies can be evaluated side by side.
 
 ## Quick Start
 
@@ -244,7 +244,7 @@ Implemented:
 - Sufficient Context answerability labels that preserve the existing context status API
 - Autorater-style sufficiency judge with answerability classification, missing-fact feedback, unsupported-claim checks, and conflict/unanswerable detection
 - Selective generation abstention policy that prevents insufficient context from producing a fully answered result
-- FRAMES-style evaluation fixture and metrics for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count
+- FRAMES-style evaluation fixture, metrics, and run comparison for fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count
 - Unit tests for core loop behavior, structured-output conversion, lexical retrieval, sufficiency judging, abstention, and evaluation metrics
 
 Improvement TODOs completed in this pass:
@@ -265,6 +265,7 @@ Improvement TODOs completed in this pass:
 - `RDD-T-00000020`: Autorater-style sufficiency judge.
 - `RDD-T-00000021`: Selective generation abstention policy.
 - `RDD-T-00000022`: FRAMES-style fixture format and metrics.
+- `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
 
 ## Paper Implementation Roadmap
 
@@ -281,9 +282,9 @@ The next implementation backlog is tracked in `.codex/review-driven-development/
    - `RDD-T-00000019`: Add answerability categories while preserving the existing context status API. Completed.
    - `RDD-T-00000020`: Implement an autorater-style sufficiency judge that returns missing facts, unsupported claims, covered facts, and feedback queries. Completed.
    - `RDD-T-00000021`: Add selective generation abstention policy so insufficient contexts cannot produce fully answered results. Completed.
-4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
+4. `RDD-T-00000010`: Add FRAMES-style multi-hop evaluation harness. Completed. This follows the Fact, Fetch, and Reason evaluation framing with fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
    - `RDD-T-00000022`: Add FRAMES-style fixture format and metrics for facts, retrieval, reasoning, citations, and iterations. Completed.
-   - `RDD-T-00000023`: Add iterative-vs-single-shot evaluation tests using a tiny multi-hop fixture.
+   - `RDD-T-00000023`: Add iterative-vs-single-shot evaluation tests using a tiny multi-hop fixture. Completed.
 5. `RDD-T-00000011`: Add conflict-aware grounded synthesis. This ensures conflicting snippets are cited and surfaced instead of silently merged.
    - `RDD-T-00000024`: Add conflict evidence contracts that can cite both incompatible snippet groups.
    - `RDD-T-00000025`: Implement conflict-aware judge and synthesis behavior for contradictory evidence.

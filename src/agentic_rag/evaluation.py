@@ -49,6 +49,14 @@ class EvaluationReport:
     distractor_corpus_hits: Sequence[str] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class EvaluationComparison:
+    fixture: EvaluationFixture
+    baseline: EvaluationReport
+    candidate: EvaluationReport
+    improved: bool
+
+
 def evaluate_run(fixture: EvaluationFixture, result: RunResult) -> EvaluationReport:
     required_fact_ids = tuple(fact.id for fact in fixture.required_facts)
     covered_fact_ids = _covered_fact_ids(result)
@@ -84,6 +92,21 @@ def evaluate_run(fixture: EvaluationFixture, result: RunResult) -> EvaluationRep
         fetched_fact_ids=fetched_fact_ids,
         cited_fact_ids=cited_fact_ids,
         distractor_corpus_hits=distractor_hits,
+    )
+
+
+def compare_runs(
+    fixture: EvaluationFixture,
+    baseline_result: RunResult,
+    candidate_result: RunResult,
+) -> EvaluationComparison:
+    baseline = evaluate_run(fixture, baseline_result)
+    candidate = evaluate_run(fixture, candidate_result)
+    return EvaluationComparison(
+        fixture=fixture,
+        baseline=baseline,
+        candidate=candidate,
+        improved=_score(candidate) > _score(baseline),
     )
 
 
@@ -127,6 +150,15 @@ def _coverage(found_ids: Sequence[str], expected_ids: Sequence[str]) -> float:
         return 1.0
     found = set(found_ids)
     return len(tuple(item for item in expected if item in found)) / len(expected)
+
+
+def _score(report: EvaluationReport) -> float:
+    return (
+        report.metrics.fact_coverage
+        + report.metrics.fetch_coverage
+        + report.metrics.reasoning_correctness
+        + report.metrics.citation_completeness
+    )
 
 
 def _enum_value(value: object) -> str:

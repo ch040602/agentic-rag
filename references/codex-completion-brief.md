@@ -70,10 +70,10 @@ src/agentic_rag/
    - Verify that routing does not search all corpora unless justified.
    - Verify that one missing fact triggers a targeted follow-up query.
    - Report fact coverage, fetch coverage, reasoning correctness, citation completeness, and iteration count.
-   - Current evaluation utilities include fixture dataclasses and dependency-free metrics for fact, fetch, reasoning, citation, and iteration reporting.
+   - Current evaluation utilities include fixture dataclasses, dependency-free metrics, and baseline-vs-candidate comparison for fact, fetch, reasoning, citation, and iteration reporting.
    - Implement in order:
      - `RDD-T-00000022`: FRAMES-style fixture format and metrics. Completed.
-     - `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests.
+     - `RDD-T-00000023`: Iterative-vs-single-shot evaluation tests. Completed.
 
 8. **Conflict-aware synthesis** (`RDD-T-00000011`)
    - Surface contradictory snippets instead of silently merging them.
