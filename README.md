@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Agentic RAG is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations. This repository implements the public Google Agentic RAG pattern with Codex; it is not a Google product and does not reproduce Google's internal implementation.
+Agentic RAG (Retrieval-Augmented Generation) is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations. This repository implements the public Google Agentic RAG pattern with Codex; it is not a Google product and does not reproduce Google's internal implementation.
 
 The repository focuses on the product gap between ordinary "retrieve once, answer once" RAG and a more dependable loop:
 
@@ -14,7 +14,7 @@ plan -> route -> rewrite -> retrieve -> draft -> judge sufficiency -> iterate ->
 
 It is intended for enterprise document search, internal knowledge assistants, RAG application developers, and researchers who need auditable evidence coverage rather than confident answers from incomplete context.
 
-## Evaluation Surface
+## Iterative Retrieval Is Tested Against One-Shot Retrieval
 
 This repo is not positioned as a benchmark leaderboard. Its proof point is a small, deterministic evaluation surface that exercises the parts ordinary RAG demos usually skip.
 
@@ -25,6 +25,17 @@ This repo is not positioned as a benchmark leaderboard. Its proof point is a sma
 | Distractor retrieval is measured | FRAMES-style reports track `distractor_corpus_hits` so irrelevant corpora are visible. |
 | Conflict and unsupported-claim behavior is covered | Sufficiency tests cover unsupported claims, conflicting evidence, selective abstention, and citation completeness. |
 | Provider integration stays swappable | LLM and retriever interfaces live behind adapters; the in-memory path is deterministic for tests and demos. |
+
+## README Review Artifacts
+
+The README is reviewed as source Markdown with `mdpr-skill` so the public page keeps a clear narrative spine and evidence-first claims.
+
+| Check | Artifact |
+|---|---|
+| Narrative flow | [`docs/mdpr-readme/narrative-review.json`](docs/mdpr-readme/narrative-review.json) |
+| Citation review | [`docs/mdpr-readme/citation-review.json`](docs/mdpr-readme/citation-review.json) |
+| Accessibility review | [`docs/mdpr-readme/accessibility-review.json`](docs/mdpr-readme/accessibility-review.json) |
+| Evidence ledger | [`docs/mdpr-readme/evidence-ledger.json`](docs/mdpr-readme/evidence-ledger.json) |
 
 ## Deterministic Demo
 
@@ -38,7 +49,8 @@ The demo exercises planning, query rewriting, retrieval, sufficiency judging, an
 
 ## Contents
 
-- [Evaluation Surface](#evaluation-surface)
+- [Iterative Retrieval Is Tested Against One-Shot Retrieval](#iterative-retrieval-is-tested-against-one-shot-retrieval)
+- [README Review Artifacts](#readme-review-artifacts)
 - [Deterministic Demo](#deterministic-demo)
 - [What This Skill Provides](#what-this-skill-provides)
 - [Repository Layout](#repository-layout)
