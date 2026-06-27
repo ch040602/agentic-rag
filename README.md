@@ -14,13 +14,36 @@ plan -> route -> rewrite -> retrieve -> draft -> judge sufficiency -> iterate ->
 
 It is intended for enterprise document search, internal knowledge assistants, RAG application developers, and researchers who need auditable evidence coverage rather than confident answers from incomplete context.
 
+## At a Glance
+
+| Question | Answer |
+|---|---|
+| What is it? | A Codex skill plus a dependency-free Python scaffold for iterative, citation-aware RAG. |
+| Best fit | Multi-hop document search, internal research assistants, and provider adapter baselines. |
+| Main difference | It treats sufficiency as an explicit fact-coverage gate instead of a vector-score threshold. |
+| Safety behavior | It can return partial or unanswerable diagnostics instead of unsupported final answers. |
+| Validation | `python scripts/validate_skill.py` and `python -m unittest discover -s tests -v`. |
+
+## Quick Example
+
+Run the deterministic in-memory demo from a checkout:
+
+```bash
+python examples/in_memory_pipeline.py
+```
+
+The demo exercises planning, query rewriting, retrieval, sufficiency judging, and grounded synthesis without requiring a model API key or vector database.
+
 ## Contents
 
+- [At a Glance](#at-a-glance)
+- [Quick Example](#quick-example)
 - [What This Skill Provides](#what-this-skill-provides)
 - [Repository Layout](#repository-layout)
 - [How It Works](#how-it-works)
 - [Core Contracts](#core-contracts)
 - [Implementation Rules](#implementation-rules)
+- [Documentation Map](#documentation-map)
 - [Install and Use](#install-and-use)
 - [Validate and Publish](#validate-and-publish)
 - [Citation](#citation)
@@ -126,6 +149,17 @@ Important contracts live in `src/agentic_rag/contracts.py`:
 - Treat sufficiency as a fact-coverage decision, not a vector-score threshold.
 - Never return a fully answered result after an insufficient sufficiency check.
 - Enforce iteration and cost limits in the orchestrator or adapter layer.
+
+## Documentation Map
+
+| Read | Use it for |
+|---|---|
+| [`SKILL.md`](SKILL.md) | Runtime activation rules for Codex-style skill use. |
+| [`references/agentic-rag-behavior.md`](references/agentic-rag-behavior.md) | Source-grounded behavior model and implementation guidance. |
+| [`references/prompts-and-schemas.md`](references/prompts-and-schemas.md) | Planner, rewriter, judge, and synthesizer prompt/schema contracts. |
+| [`references/source-map.md`](references/source-map.md) | Public source alignment and citation notes. |
+| [`src/agentic_rag/contracts.py`](src/agentic_rag/contracts.py) | Dataclasses and enums that define the scaffold boundary. |
+| [`tests/`](tests/) | Expected behavior for iteration, sufficiency, conflicts, and citations. |
 
 ## Install and Use
 
