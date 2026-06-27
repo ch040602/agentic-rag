@@ -4,6 +4,10 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+<p align="center">
+  <img src="docs/assets/readme-teaser.svg" alt="Agentic RAG teaser: iterative retrieval, sufficiency checks, missing-fact feedback, and claim-level citations" width="900">
+</p>
+
 Agentic RAG (Retrieval-Augmented Generation) is a Codex-compatible Agent Skill and dependency-free Python scaffold for building RAG systems that can decide whether retrieved context is sufficient, identify missing facts, generate targeted follow-up queries, and produce claim-level citations. This repository implements the public Google Agentic RAG pattern with Codex; it is not a Google product and does not reproduce Google's internal implementation.
 
 The repository focuses on the product gap between ordinary "retrieve once, answer once" RAG and a more dependable loop:
