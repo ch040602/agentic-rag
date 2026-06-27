@@ -14,17 +14,19 @@ plan -> route -> rewrite -> retrieve -> draft -> judge sufficiency -> iterate ->
 
 It is intended for enterprise document search, internal knowledge assistants, RAG application developers, and researchers who need auditable evidence coverage rather than confident answers from incomplete context.
 
-## At a Glance
+## Evaluation Surface
 
-| Question | Answer |
+This repo is not positioned as a benchmark leaderboard. Its proof point is a small, deterministic evaluation surface that exercises the parts ordinary RAG demos usually skip.
+
+| Capability | Evidence in this repo |
 |---|---|
-| What is it? | A Codex skill plus a dependency-free Python scaffold for iterative, citation-aware RAG. |
-| Best fit | Multi-hop document search, internal research assistants, and provider adapter baselines. |
-| Main difference | It treats sufficiency as an explicit fact-coverage gate instead of a vector-score threshold. |
-| Safety behavior | It can return partial or unanswerable diagnostics instead of unsupported final answers. |
-| Validation | `python scripts/validate_skill.py` and `python -m unittest discover -s tests -v`. |
+| Iterative retrieval beats one-shot retrieval when the second hop is missing | `tests/test_evaluation.py` compares `max_iterations=1` against `max_iterations=2`: fetch coverage and citation completeness move from `0.5` to `1.0`. |
+| Missing context is represented explicitly | `GroundedAnswer` can return `PARTIAL` with missing facts and a `sufficiency_score` instead of fabricating a full answer. |
+| Distractor retrieval is measured | FRAMES-style reports track `distractor_corpus_hits` so irrelevant corpora are visible. |
+| Conflict and unsupported-claim behavior is covered | Sufficiency tests cover unsupported claims, conflicting evidence, selective abstention, and citation completeness. |
+| Provider integration stays swappable | LLM and retriever interfaces live behind adapters; the in-memory path is deterministic for tests and demos. |
 
-## Quick Example
+## Deterministic Demo
 
 Run the deterministic in-memory demo from a checkout:
 
@@ -32,12 +34,12 @@ Run the deterministic in-memory demo from a checkout:
 python examples/in_memory_pipeline.py
 ```
 
-The demo exercises planning, query rewriting, retrieval, sufficiency judging, and grounded synthesis without requiring a model API key or vector database.
+The demo exercises planning, query rewriting, retrieval, sufficiency judging, and grounded synthesis without requiring a model API key or vector database. Use it to understand the scaffold before wiring a provider adapter.
 
 ## Contents
 
-- [At a Glance](#at-a-glance)
-- [Quick Example](#quick-example)
+- [Evaluation Surface](#evaluation-surface)
+- [Deterministic Demo](#deterministic-demo)
 - [What This Skill Provides](#what-this-skill-provides)
 - [Repository Layout](#repository-layout)
 - [How It Works](#how-it-works)
